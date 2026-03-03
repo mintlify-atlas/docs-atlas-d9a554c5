@@ -176,21 +176,16 @@ When no configuration file is present, Vibrant uses these defaults:
     
     // Security - CRITICAL
     'hardcoded-credentials': 'error',
-    'no-sql-injection': 'error',
-    'no-unsafe-inner-html': 'error',
-    
-    // Performance - CRITICAL
-    'no-await-in-loop': 'error',
-    
-    // Possible bugs - CRITICAL
-    'no-unreachable': 'error',
-    'use-isnan': 'error',
     
     // Debug code - WARNING
     'console-log-debugging': 'warn',
   }
 }
 ```
+
+<Note>
+  Only 6 rules are enabled by default. The remaining 9 rules are available but must be explicitly enabled in your configuration file. Use `vibrant rules` to see all available rules.
+</Note>
 
 ## Examples
 
