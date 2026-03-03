@@ -1,0 +1,391 @@
+---
+title: Ollama local setup
+description: Run AI models locally with Ollama for private, unlimited code analysis
+---
+
+Ollama allows you to run powerful AI models locally on your machine, providing completely free and private code analysis without any API keys or internet connection.
+
+## Why Ollama?
+
+- **Completely free** - No API costs, unlimited usage
+- **Private** - Your code never leaves your machine
+- **Offline** - Works without internet connection
+- **No rate limits** - Analyze as much code as you want
+- **Multiple models** - Choose from various open-source models
+
+## Prerequisites
+
+- **RAM**: At least 8GB (16GB recommended for larger models)
+- **Storage**: 5-10GB for model files
+- **OS**: macOS, Linux, or Windows
+
+## Install Ollama
+
+<Steps>
+  <Step title="Download Ollama">
+    Visit [ollama.ai](https://ollama.ai) and download the installer for your operating system.
+  </Step>
+  
+  <Step title="Install">
+    Run the installer and follow the installation instructions.
+  </Step>
+  
+  <Step title="Verify installation">
+    Open a terminal and run:
+    ```bash
+    ollama --version
+    ```
+  </Step>
+</Steps>
+
+<CodeGroup>
+```bash macOS
+# Download and install from ollama.ai, or use Homebrew:
+brew install ollama
+```
+
+```bash Linux
+curl -fsSL https://ollama.ai/install.sh | sh
+```
+
+```bash Windows
+# Download the installer from ollama.ai and run it
+# Or use Windows Subsystem for Linux (WSL)
+```
+</CodeGroup>
+
+## Pull a model
+
+Download a model for code analysis:
+
+```bash
+# Default model (recommended)
+ollama pull qwen2.5:7b
+
+# Alternative models
+ollama pull llama3.1
+ollama pull codellama:13b
+ollama pull mistral
+```
+
+<Note>
+Vibrant uses **qwen2.5:7b** by default. It provides excellent code analysis quality with reasonable resource usage.
+</Note>
+
+## Setup
+
+### Option 1: Default configuration (recommended)
+
+Ollama runs on `http://localhost:11434` by default. If you're using the default settings, no configuration is needed:
+
+```bash
+# Start Ollama (usually starts automatically after installation)
+ollama serve
+
+# In another terminal, run Vibrant
+vibrant . --ai --provider ollama
+```
+
+### Option 2: Custom host
+
+If Ollama is running on a different host or port:
+
+```bash
+export OLLAMA_HOST="http://localhost:11434"
+vibrant . --ai --provider ollama
+```
+
+Or use `OLLAMA_BASE_URL`:
+
+```bash
+export OLLAMA_BASE_URL="http://localhost:11434"
+vibrant . --ai --provider ollama
+```
+
+### Option 3: .env file
+
+Create a `.env` file in your project:
+
+```bash .env
+OLLAMA_HOST=http://localhost:11434
+```
+
+### Option 4: Configuration file
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'ollama',
+};
+```
+
+## Usage
+
+Run Vibrant with Ollama:
+
+```bash
+# Make sure Ollama is running
+ollama serve
+
+# In another terminal
+vibrant . --ai --provider ollama
+```
+
+## Available models
+
+Vibrant supports any Ollama model, but these are recommended for code analysis:
+
+<AccordionGroup>
+  <Accordion title="qwen2.5:7b (default)">
+    - **Size**: ~4.7GB
+    - **RAM**: 8GB minimum
+    - **Speed**: Fast
+    - **Quality**: Excellent for code
+    - **Best for**: General code analysis, daily use
+  </Accordion>
+  
+  <Accordion title="llama3.1">
+    - **Size**: ~4.7GB (8B model)
+    - **RAM**: 8GB minimum
+    - **Speed**: Fast
+    - **Quality**: Very good
+    - **Best for**: General purpose analysis
+  </Accordion>
+  
+  <Accordion title="codellama:13b">
+    - **Size**: ~7.4GB
+    - **RAM**: 16GB recommended
+    - **Speed**: Medium
+    - **Quality**: Excellent for code
+    - **Best for**: Specialized code analysis
+  </Accordion>
+  
+  <Accordion title="mistral">
+    - **Size**: ~4.1GB
+    - **RAM**: 8GB minimum
+    - **Speed**: Very fast
+    - **Quality**: Good
+    - **Best for**: Quick analysis, resource-constrained systems
+  </Accordion>
+</AccordionGroup>
+
+### Change the model
+
+Set the `OLLAMA_MODEL` environment variable:
+
+```bash
+export OLLAMA_MODEL="llama3.1"
+vibrant . --ai --provider ollama
+```
+
+Or in your `.env` file:
+
+```bash .env
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=llama3.1
+```
+
+## Example output
+
+```bash
+vibrant . --ai --provider ollama
+```
+
+```
+🔮 Vibrant Analysis
+─────────────────────
+
+📡 AI Analysis (ollama:qwen2.5:7b)
+
+The codebase contains several security vulnerabilities and code quality
+issues. The most critical concern is hardcoded credentials in multiple
+files. Error handling is inconsistent, with empty catch blocks that
+silently swallow exceptions. Debug logging statements are present in
+production code.
+
+Key findings:
+- API keys hardcoded in src/api.ts (line 24) and src/config.ts (line 15)
+- 6 empty catch blocks across the codebase
+- console.log statements in 12 files
+- SQL queries vulnerable to injection in src/db.ts
+
+Recommendations:
+- Move all secrets to environment variables immediately
+- Implement structured error logging
+- Remove debug code before deployment
+- Use parameterized queries for database operations
+
+✔ Analysis complete
+
+✕ 4 errors · ⚠ 12 warnings · 85 files · 15s
+```
+
+<Note>
+Ollama streams the response in real-time, so you'll see the analysis being generated as it processes your code.
+</Note>
+
+## Troubleshooting
+
+### Error: Connection refused
+
+```
+Ollama API error: fetch failed
+```
+
+**Solution**: Make sure Ollama is running:
+
+```bash
+# Start Ollama
+ollama serve
+
+# Check if it's running
+curl http://localhost:11434/api/version
+```
+
+### Error: Model not found
+
+```
+Ollama API error: model 'qwen2.5:7b' not found
+```
+
+**Solution**: Pull the model first:
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+### Error: Out of memory
+
+If Ollama crashes or runs very slowly:
+
+**Solutions**:
+
+1. **Use a smaller model**:
+   ```bash
+   ollama pull mistral
+   export OLLAMA_MODEL="mistral"
+   vibrant . --ai --provider ollama
+   ```
+
+2. **Close other applications** to free up RAM
+
+3. **Analyze fewer files**:
+   ```bash
+   vibrant src/ --ai --provider ollama
+   ```
+
+### Slow performance
+
+**Solutions**:
+
+- Use a smaller, faster model like `mistral`
+- Close unnecessary applications to free resources
+- Analyze specific directories instead of entire codebase
+- Consider using a cloud provider for large projects
+
+## Best practices
+
+<Steps>
+  <Step title="Keep Ollama running">
+    Run `ollama serve` in the background or configure it to start on boot.
+  </Step>
+  
+  <Step title="Use appropriate models">
+    - Small projects: `mistral` (fastest)
+    - Medium projects: `qwen2.5:7b` (balanced)
+    - Large projects or specialized code: `codellama:13b` (best quality)
+  </Step>
+  
+  <Step title="Monitor resources">
+    Keep an eye on RAM usage. If your system struggles, switch to a smaller model.
+  </Step>
+  
+  <Step title="Perfect for sensitive code">
+    Use Ollama when working with proprietary or sensitive code that cannot be sent to external APIs.
+  </Step>
+</Steps>
+
+## Performance tips
+
+### GPU acceleration (optional)
+
+If you have an NVIDIA GPU:
+
+```bash
+# Ollama automatically uses GPU if available
+# Verify GPU usage:
+nvidia-smi
+```
+
+GPU acceleration significantly improves performance.
+
+### Reduce context size
+
+Analyze specific directories to reduce memory usage:
+
+```bash
+# Instead of analyzing everything
+vibrant . --ai --provider ollama
+
+# Analyze specific paths
+vibrant src/ --ai --provider ollama
+vibrant "src/**/*.ts" --ai --provider ollama
+```
+
+## When to use Ollama
+
+Ollama is perfect for:
+
+- **Privacy-sensitive projects** - Keep your code on your machine
+- **Unlimited analysis** - No API costs or rate limits
+- **Offline development** - Work without internet connection
+- **Learning and experimentation** - Try different models freely
+- **CI/CD on self-hosted runners** - No external dependencies
+
+## Model comparison
+
+| Model | Size | RAM | Speed | Code Quality | Best For |
+|-------|------|-----|-------|--------------|----------|
+| **mistral** | 4.1GB | 8GB | Fast | Good | Quick checks |
+| **qwen2.5:7b** | 4.7GB | 8GB | Fast | Excellent | Daily use |
+| **llama3.1** | 4.7GB | 8GB | Fast | Very good | General purpose |
+| **codellama:13b** | 7.4GB | 16GB | Medium | Excellent | Code specialization |
+
+## Advanced configuration
+
+### Run Ollama on a different port
+
+```bash
+OLLAMA_HOST=0.0.0.0:8080 ollama serve
+```
+
+Then configure Vibrant:
+
+```bash
+export OLLAMA_HOST="http://localhost:8080"
+vibrant . --ai --provider ollama
+```
+
+### Use remote Ollama instance
+
+Run Ollama on a powerful server and connect from your laptop:
+
+```bash
+# On the server
+OLLAMA_HOST=0.0.0.0:11434 ollama serve
+
+# On your laptop
+export OLLAMA_HOST="http://server-ip:11434"
+vibrant . --ai --provider ollama
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI providers overview" icon="layer-group" href="/ai-providers/overview">
+    Compare all available providers
+  </Card>
+  
+  <Card title="Browse models" icon="cube" href="https://ollama.ai/library">
+    Explore more models on Ollama's library
+  </Card>
+</CardGroup>

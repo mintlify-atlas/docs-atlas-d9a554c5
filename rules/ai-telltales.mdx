@@ -1,0 +1,386 @@
+---
+title: AI telltales rules
+description: Spot patterns common in AI-generated code like emoji comments, TODOs, and magic numbers
+---
+
+AI telltales are patterns that commonly appear in AI-generated code. While not bugs, they indicate code that may need human review and refinement.
+
+## ai-comment-emojis
+
+**Severity:** Warning  
+**Category:** AI Telltales  
+**Fixable:** Yes
+
+Detects emojis in code comments, a common pattern in AI-generated code.
+
+### Why this matters
+
+AI models often generate comments with emojis to make code more "friendly" or "visual". While not harmful, emojis in comments are unprofessional in production code and can cause encoding issues in some environments.
+
+### What it detects
+
+The rule identifies any emoji characters in comments, including:
+- Smileys and people: 😀 🔥 💀 🤖
+- Symbols: ⚠️ ✅ ❌ ⭐
+- Objects: 🚀 💡 🔧 📝
+
+### Examples
+
+<Accordion title="Bad: Emojis in comments">
+```typescript
+// BAD: AI-generated comments with emojis
+
+// 🚀 Initialize the application
+function initApp() {
+  // 🔧 Setup configuration
+  loadConfig();
+  
+  // 🌟 Connect to database
+  connectDB();
+}
+
+/**
+ * Process user data 📊
+ * @param user - User object 👤
+ * @returns Processed result ✨
+ */
+function processUser(user: User) {
+  // ⚠️ Validate input
+  validate(user);
+  
+  // 💾 Save to database
+  return saveUser(user);
+}
+
+// TODO: Fix this later 🔥
+// FIXME: This is broken 💀
+```
+</Accordion>
+
+<Accordion title="Good: Plain text comments">
+```typescript
+// Good: Professional plain text comments
+
+// Initialize the application
+function initApp() {
+  // Setup configuration
+  loadConfig();
+  
+  // Connect to database
+  connectDB();
+}
+
+/**
+ * Process user data
+ * @param user - User object
+ * @returns Processed result
+ */
+function processUser(user: User) {
+  // Validate input
+  validate(user);
+  
+  // Save to database
+  return saveUser(user);
+}
+
+// TODO: Fix this later
+// FIXME: This needs attention
+```
+</Accordion>
+
+### Auto-fix
+
+This rule can automatically remove emojis from comments while preserving the text.
+
+### Location
+
+`apps/cli/src/rules/ai-comment-emojis.ts:1`
+
+---
+
+## ai-todo-comments
+
+**Severity:** Warning  
+**Category:** AI Telltales  
+**Fixable:** Yes
+
+Detects excessive TODO/FIXME/HACK comments that AI often leaves behind.
+
+### Why this matters
+
+AI models frequently generate TODO comments for functionality they don't fully implement. While some TODOs are legitimate, excessive TODOs indicate incomplete or hastily generated code.
+
+### What it detects
+
+The rule looks for AI-generated TODO patterns:
+- `TODO: implement`, `TODO: fix`, `TODO: add`
+- `TODO: later`, `TODO: soon`, `TODO: next`
+- `FIXME: later`, `FIXME: soon`, `FIXME: when`
+- `HACK: temp`, `HACK: temporary`, `HACK: workaround`
+- Generic `TODO`, `FIXME`, `HACK` comments
+- TODOs with emojis
+
+### Threshold
+
+Reports excessive TODOs if 3 or more are found in a file.
+
+### Examples
+
+<Accordion title="Bad: Excessive AI TODOs">
+```typescript
+// BAD: Many incomplete TODOs left by AI
+
+class UserService {
+  // TODO: implement proper validation
+  validateUser(user: User) {
+    return true;
+  }
+  
+  // TODO: add error handling
+  async createUser(data: UserData) {
+    return database.insert(data);
+  }
+  
+  // TODO: implement later
+  updateUser(id: string, data: Partial<UserData>) {
+    throw new Error('Not implemented');
+  }
+  
+  // FIXME: this is a temporary hack
+  deleteUser(id: string) {
+    // TODO: soft delete instead
+    return database.delete(id);
+  }
+  
+  // TODO: add caching
+  // TODO: add pagination
+  // TODO: add sorting
+  async listUsers() {
+    return database.findAll();
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Good: Complete implementations">
+```typescript
+// Good: Actually implemented functionality
+
+class UserService {
+  validateUser(user: User) {
+    if (!user.email || !user.email.includes('@')) {
+      throw new ValidationError('Invalid email');
+    }
+    if (!user.name || user.name.length < 2) {
+      throw new ValidationError('Name too short');
+    }
+    return true;
+  }
+  
+  async createUser(data: UserData) {
+    try {
+      this.validateUser(data);
+      return await database.insert(data);
+    } catch (error) {
+      logger.error('Failed to create user:', error);
+      throw new AppError('User creation failed', error);
+    }
+  }
+  
+  async updateUser(id: string, data: Partial<UserData>) {
+    const user = await database.findById(id);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    return database.update(id, data);
+  }
+  
+  // Legitimate TODO for future enhancement
+  // TODO: Implement soft delete (ticket #123)
+  async deleteUser(id: string) {
+    return database.delete(id);
+  }
+  
+  async listUsers(options: ListOptions) {
+    const { page = 1, limit = 20, sort = 'createdAt' } = options;
+    return database.paginate({ page, limit, sort });
+  }
+}
+```
+</Accordion>
+
+### Legitimate TODOs
+
+Not all TODOs are bad. Good TODOs:
+- Reference specific tickets or issues
+- Have clear ownership and timeline
+- Describe why something is deferred
+
+```typescript
+// Good TODO: Specific and actionable
+// TODO(#456): Add Redis caching after infrastructure is ready (Q2 2024)
+
+// Good TODO: Explains reasoning
+// TODO: Switch to streaming API once backend supports it
+//       Currently using polling to maintain compatibility
+```
+
+### Location
+
+`apps/cli/src/rules/ai-todo-comments.ts:1`
+
+---
+
+## magic-numbers
+
+**Severity:** Warning  
+**Category:** Best Practices
+
+Detects unnamed numeric constants ("magic numbers") that hurt code readability.
+
+### Why this matters
+
+Magic numbers are numeric literals without context. They make code harder to understand and maintain. AI-generated code often contains magic numbers that should be extracted to named constants.
+
+### What it detects
+
+The rule identifies:
+- Numbers appearing 3+ times in a file
+- Numbers greater than 1000
+- Excludes common safe values
+
+### Safe values (ignored)
+
+Common numbers that don't need extraction:
+- Boundaries: 0, 1, -1, 2, 10, 100, 1000
+- HTTP status: 200, 201, 204, 301, 302, 400, 401, 403, 404, 500, 502, 503
+- Binary/ASCII: 256, 128, 64, 32
+- Time: 60, 3600, 24, 7, 30, 365
+- Sizes: 1024, 4096, 8192
+
+### Examples
+
+<Accordion title="Bad: Magic numbers">
+```typescript
+// BAD: What do these numbers mean?
+function calculateDiscount(price: number, customerType: string) {
+  if (customerType === 'premium') {
+    return price * 0.85; // What is 0.85?
+  }
+  if (price > 5000) { // Why 5000?
+    return price * 0.95;
+  }
+  return price;
+}
+
+function validatePassword(password: string) {
+  if (password.length < 12) { // Why 12?
+    return false;
+  }
+  if (password.length > 128) { // Why 128?
+    return false;
+  }
+  return true;
+}
+
+// BAD: Repeated magic number
+function processData(items: Item[]) {
+  const chunk1 = items.slice(0, 250);
+  const chunk2 = items.slice(250, 500);
+  const chunk3 = items.slice(500, 750);
+  // What is 250?
+}
+```
+</Accordion>
+
+<Accordion title="Good: Named constants">
+```typescript
+// Good: Named constants with clear meaning
+const PREMIUM_DISCOUNT = 0.85; // 15% off
+const BULK_DISCOUNT = 0.95; // 5% off
+const BULK_THRESHOLD = 5000; // $5000 minimum
+
+function calculateDiscount(price: number, customerType: string) {
+  if (customerType === 'premium') {
+    return price * PREMIUM_DISCOUNT;
+  }
+  if (price > BULK_THRESHOLD) {
+    return price * BULK_DISCOUNT;
+  }
+  return price;
+}
+
+// Good: Password constraints
+const MIN_PASSWORD_LENGTH = 12; // Security requirement
+const MAX_PASSWORD_LENGTH = 128; // Database limit
+
+function validatePassword(password: string) {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return false;
+  }
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    return false;
+  }
+  return true;
+}
+
+// Good: Named chunk size
+const CHUNK_SIZE = 250;
+
+function processData(items: Item[]) {
+  const chunk1 = items.slice(0, CHUNK_SIZE);
+  const chunk2 = items.slice(CHUNK_SIZE, CHUNK_SIZE * 2);
+  const chunk3 = items.slice(CHUNK_SIZE * 2, CHUNK_SIZE * 3);
+}
+```
+</Accordion>
+
+### When to extract constants
+
+Extract a number to a constant when:
+- It appears multiple times
+- Its meaning isn't obvious
+- It represents a business rule or constraint
+- It might change in the future
+- You need to document what it represents
+
+### When numbers are OK
+
+Numbers don't need extraction when:
+- They're obviously 0, 1, or -1
+- They're array indices
+- They're incrementing/decrementing
+- Context makes them self-explanatory
+
+```typescript
+// These are fine - context is clear
+const arr = [1, 2, 3];
+for (let i = 0; i < items.length; i++) {
+  count++;
+}
+```
+
+### Location
+
+`apps/cli/src/rules/magic-numbers.ts:1`
+
+## Why these patterns indicate AI
+
+AI language models:
+1. Add emojis to make code "friendly" and "visual"
+2. Generate TODOs for functionality they can't fully implement
+3. Use numeric literals without considering maintainability
+4. Focus on working code over production-ready code
+
+These patterns aren't bugs, but they indicate code that needs human review before production.
+
+## Best practices
+
+<Card title="Refining AI-generated code" icon="sparkles">
+  - Remove emojis from comments
+  - Complete or remove TODO comments
+  - Extract magic numbers to named constants
+  - Add context and documentation
+  - Review for maintainability
+  - Test thoroughly before deploying
+</Card>

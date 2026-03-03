@@ -1,0 +1,344 @@
+---
+title: Google Gemini setup
+description: Use Google's Gemini models with Vibrant CLI for fast, free code analysis
+---
+
+Google Gemini offers powerful AI models with a generous free tier, making it an excellent choice for code analysis with Vibrant CLI without any upfront costs.
+
+## Why Gemini?
+
+- **Free tier** - Generous limits for developers at no cost
+- **Fast** - Quick response times for rapid analysis
+- **High quality** - Excellent code understanding capabilities
+- **No credit card required** - Start analyzing immediately
+
+## Get an API key
+
+<Steps>
+  <Step title="Visit Google AI Studio">
+    Go to [aistudio.google.com](https://aistudio.google.com) and sign in with your Google account.
+  </Step>
+  
+  <Step title="Get API key">
+    Click "Get API key" in the left sidebar.
+  </Step>
+  
+  <Step title="Create key">
+    Click "Create API key" and select a Google Cloud project (or create a new one).
+  </Step>
+  
+  <Step title="Copy your key">
+    Your key will look like `AIza...`. Copy it and keep it secure.
+  </Step>
+</Steps>
+
+<Note>
+No credit card is required for the free tier. You can start using Gemini immediately.
+</Note>
+
+## Setup
+
+### Option 1: Environment variable (recommended)
+
+Set the environment variable in your shell:
+
+```bash
+export GOOGLE_GENERATIVE_AI_API_KEY="AIza..."
+```
+
+To make it permanent, add it to your shell profile:
+
+<CodeGroup>
+```bash ~/.bashrc or ~/.zshrc
+# Add this line to your shell profile
+export GOOGLE_GENERATIVE_AI_API_KEY="AIza..."
+```
+
+```bash Windows PowerShell
+$env:GOOGLE_GENERATIVE_AI_API_KEY="AIza..."
+```
+</CodeGroup>
+
+### Option 2: Alternative environment variable
+
+You can also use the shorter `GEMINI_API_KEY` variable:
+
+```bash
+export GEMINI_API_KEY="AIza..."
+```
+
+### Option 3: .env file
+
+Create a `.env` file in your project directory:
+
+```bash .env
+GOOGLE_GENERATIVE_AI_API_KEY=AIza...
+# Or alternatively:
+# GEMINI_API_KEY=AIza...
+```
+
+<Warning>
+Add `.env` to your `.gitignore` to prevent committing your API key.
+</Warning>
+
+### Option 4: Configuration file
+
+Create a `vibrant.config.js` file:
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'gemini',
+  // API key will be read from environment variable
+};
+```
+
+## Usage
+
+Run Vibrant with Gemini:
+
+```bash
+# Auto-detect provider (if GOOGLE_GENERATIVE_AI_API_KEY is set)
+vibrant . --ai
+
+# Explicitly specify Gemini
+vibrant . --ai --provider gemini
+```
+
+## Available models
+
+Vibrant uses **gemini-2.0-flash-lite** by default for optimal speed and quality.
+
+<AccordionGroup>
+  <Accordion title="gemini-2.0-flash-lite (default)">
+    - **Context**: 1M tokens
+    - **Cost**: Free tier available
+    - **Speed**: Very fast
+    - **Quality**: Excellent for code analysis
+    - **Best for**: Daily development, CI/CD pipelines
+    - **Free tier**: 15 RPM, 1M TPM, 1500 RPD
+  </Accordion>
+  
+  <Accordion title="gemini-1.5-flash">
+    - **Context**: 1M tokens
+    - **Cost**: Free tier available
+    - **Speed**: Very fast
+    - **Quality**: High performance
+    - **Best for**: Fast analysis of large codebases
+    - **Free tier**: 15 RPM, 1M TPM, 1500 RPD
+  </Accordion>
+  
+  <Accordion title="gemini-1.5-pro">
+    - **Context**: 2M tokens
+    - **Cost**: Free tier available
+    - **Speed**: Fast
+    - **Quality**: Superior reasoning
+    - **Best for**: Complex analysis, large projects
+    - **Free tier**: 2 RPM, 32K TPM, 50 RPD
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+RPM = Requests per minute, TPM = Tokens per minute, RPD = Requests per day
+</Note>
+
+### Change the model
+
+Set the `GEMINI_MODEL` environment variable:
+
+```bash
+export GEMINI_MODEL="gemini-1.5-pro"
+vibrant . --ai --provider gemini
+```
+
+Or in your `.env` file:
+
+```bash .env
+GOOGLE_GENERATIVE_AI_API_KEY=AIza...
+GEMINI_MODEL=gemini-1.5-pro
+```
+
+## Free tier limits
+
+| Model | Requests/min | Tokens/min | Requests/day |
+|-------|--------------|------------|-------------|
+| **gemini-2.0-flash-lite** | 15 | 1M | 1500 |
+| **gemini-1.5-flash** | 15 | 1M | 1500 |
+| **gemini-1.5-pro** | 2 | 32K | 50 |
+
+These limits are generally sufficient for:
+- Regular development workflows
+- Small to medium team usage
+- CI/CD pipeline integration
+- Learning and experimentation
+
+<Note>
+If you need higher limits, you can enable billing in Google Cloud Console. Pay-as-you-go pricing is very affordable.
+</Note>
+
+## Example output
+
+```bash
+vibrant . --ai --provider gemini
+```
+
+```
+🔮 Vibrant Analysis
+─────────────────────
+
+📡 AI Analysis (gemini:gemini-2.0-flash-lite)
+
+📊 Token Optimization:
+   Original: 38,000 tokens
+   Summarized: 15,200 tokens
+   Savings: 60.0%
+
+✔ Analysis complete
+
+📋 Summary:
+The codebase has solid structure but contains security issues
+that need immediate attention. Error handling could be improved
+for better debugging and user experience.
+
+🔍 Key Findings:
+  • API credentials hardcoded in 2 files
+  • 8 empty catch blocks that swallow errors
+  • Debug console.log statements left in production code
+
+💡 Recommendations:
+  • Move all secrets to environment variables
+  • Add proper error logging and monitoring
+  • Remove debug code before deployment
+  • Consider implementing a centralized logging service
+
+✕ 2 errors · ⚠ 8 warnings · 75 files · 6s
+```
+
+## Troubleshooting
+
+### Error: API key not found
+
+```
+Gemini API error: API key not valid
+```
+
+**Solution**: Set the `GOOGLE_GENERATIVE_AI_API_KEY` or `GEMINI_API_KEY` environment variable:
+
+```bash
+export GOOGLE_GENERATIVE_AI_API_KEY="AIza..."
+```
+
+### Error: Quota exceeded
+
+```
+Gemini API quota exceeded. Free tier limit reached.
+
+Options:
+  • Wait a few minutes and try again
+  • Try Ollama (free, local): vibrant . --ai --provider ollama
+  • Enable billing: https://aistudio.google.com/
+```
+
+**Solutions**:
+
+1. **Wait and retry**: Free tier resets per minute/day. Wait a few minutes.
+2. **Use Ollama**: Switch to local models: `vibrant . --ai --provider ollama`
+3. **Use OpenRouter**: Try free models: `vibrant . --ai --provider openrouter`
+4. **Enable billing**: Add payment method for higher limits (very affordable)
+
+### Error: Resource exhausted
+
+```
+Gemini API error: resource exhausted
+```
+
+**Solution**: You've hit the rate limit. Vibrant automatically retries, but if it persists:
+
+```bash
+# Wait 60 seconds and try again
+sleep 60 && vibrant . --ai --provider gemini
+
+# Or use a different provider
+vibrant . --ai --provider openrouter
+```
+
+## Best practices
+
+<Steps>
+  <Step title="Use for daily development">
+    Gemini's free tier is perfect for frequent code analysis during development.
+  </Step>
+  
+  <Step title="Respect rate limits">
+    For large projects, analyze in smaller batches or use specific file patterns.
+  </Step>
+  
+  <Step title="Enable billing for teams">
+    If multiple team members are using the same API key, consider enabling pay-as-you-go billing.
+  </Step>
+  
+  <Step title="Use in CI/CD">
+    Gemini's speed and free tier make it ideal for automated code quality checks.
+  </Step>
+</Steps>
+
+## CI/CD integration
+
+For GitHub Actions:
+
+```yaml .github/workflows/code-quality.yml
+name: Code Quality
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run Vibrant with Gemini
+        run: npx vibrant-cli . --ai --provider gemini
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+```
+
+<Note>
+Add `GOOGLE_GENERATIVE_AI_API_KEY` as a secret in your repository settings.
+</Note>
+
+## Paid tier (optional)
+
+If you need higher limits, enable billing:
+
+<Steps>
+  <Step title="Enable billing">
+    Visit [Google Cloud Console](https://console.cloud.google.com) and add a payment method.
+  </Step>
+  
+  <Step title="Very affordable pricing">
+    - gemini-2.0-flash-lite: ~$0.01 per 1M tokens
+    - gemini-1.5-flash: ~$0.04 per 1M tokens  
+    - gemini-1.5-pro: ~$1.25 per 1M tokens
+  </Step>
+  
+  <Step title="Significantly higher limits">
+    Paid tier removes most rate limiting for typical usage.
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI providers overview" icon="layer-group" href="/ai-providers/overview">
+    Compare all available providers
+  </Card>
+  
+  <Card title="Ollama setup" icon="server" href="/ai-providers/ollama">
+    Try local models for unlimited free usage
+  </Card>
+</CardGroup>

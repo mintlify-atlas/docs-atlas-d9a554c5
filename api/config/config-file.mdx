@@ -1,0 +1,328 @@
+---
+title: Configuration file
+description: Complete reference for vibrant.config.js
+---
+
+The `vibrant.config.js` file configures how Vibrant analyzes your codebase. This file is optional - Vibrant works with zero configuration using sensible defaults.
+
+## Configuration file formats
+
+Vibrant supports multiple configuration file formats:
+
+- `vibrant.config.js` (CommonJS)
+- `vibrant.config.mjs` (ES modules)
+- `vibrant.config.cjs` (CommonJS explicit)
+- `vibrant.config.ts` (TypeScript)
+- `.vibrantrc`
+- `.vibrantrc.js`
+- `.vibrantrc.json`
+
+## Basic example
+
+```javascript vibrant.config.js
+module.exports = {
+  ignore: ['node_modules', 'dist', 'build'],
+  format: 'pretty',
+  provider: 'openrouter',
+  rules: {
+    'no-explicit-any': 'error',
+    'console-log-debugging': 'warn',
+    'magic-numbers': 'off',
+  },
+};
+```
+
+## Configuration options
+
+### Files and ignores
+
+<ParamField path="files" type="string[]" optional>
+  Glob patterns for files to include in analysis.
+  
+  **Default:**
+  ```javascript
+  ['src/**/*', 'lib/**/*', 'app/**/*', 'pages/**/*', 'components/**/*']
+  ```
+  
+  **Example:**
+  ```javascript
+  files: ['src/**/*.ts', 'src/**/*.tsx']
+  ```
+</ParamField>
+
+<ParamField path="ignore" type="string[]" optional>
+  Glob patterns for files and directories to exclude from analysis.
+  
+  **Default:**
+  ```javascript
+  [
+    '**/node_modules/**',
+    '**/.git/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/.next/**',
+    '**/.turbo/**',
+    '**/coverage/**',
+    '**/*.d.ts',
+    '**/test/**',
+    '**/tests/**',
+    '**/__tests__/**',
+  ]
+  ```
+  
+  **Example:**
+  ```javascript
+  ignore: ['node_modules', 'dist', '*.config.js']
+  ```
+</ParamField>
+
+<ParamField path="ignores" type="string[]" optional>
+  Alias for `ignore`. Both properties work identically.
+</ParamField>
+
+### Output formatting
+
+<ParamField path="format" type="string" optional>
+  Default output format for displaying analysis results.
+  
+  **Values:**
+  - `pretty` - Colorful, detailed output with syntax highlighting (default)
+  - `compact` - Minimal output showing only essential information
+  - `plan` - Markdown report saved to `vibrant-report.md`
+  - `json` - Machine-readable JSON format
+  
+  **Example:**
+  ```javascript
+  format: 'compact'
+  ```
+</ParamField>
+
+### AI provider
+
+<ParamField path="provider" type="string" optional>
+  AI provider to use for enhanced analysis when running with `--ai` flag.
+  
+  **Values:**
+  - `openai` - GPT-4o-mini
+  - `claude` - Claude 3 Haiku
+  - `gemini` - Gemini 1.5 Flash
+  - `ollama` - Local models
+  - `openrouter` - Multi-model API
+  
+  Requires corresponding environment variable (e.g., `OPENAI_API_KEY`).
+  
+  **Example:**
+  ```javascript
+  provider: 'openrouter'
+  ```
+</ParamField>
+
+### Rules
+
+<ParamField path="rules" type="object" optional>
+  Configure individual rule severity levels and options.
+  
+  Each key is a rule ID, and the value can be:
+  - A string: `'error'`, `'warn'`, `'info'`, or `'off'`
+  - An array: `['error', ...options]` for rules that accept configuration
+  
+  **Default rules (all enabled as errors):**
+  ```javascript
+  rules: {
+    'no-explicit-any': 'error',
+    'unimplemented-error': 'error',
+    'empty-function-body': 'error',
+    'empty-catch-block': 'error',
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    'no-await-in-loop': 'error',
+    'no-unreachable': 'error',
+    'use-isnan': 'error',
+    'console-log-debugging': 'warn',
+  }
+  ```
+  
+  See [rule configuration](/api/config/rule-config) for details.
+</ParamField>
+
+### Language options
+
+<ParamField path="languageOptions" type="object" optional>
+  Configure language parsing settings.
+  
+  **Properties:**
+  - `ecmaVersion` (number) - ECMAScript version (default: `2022`)
+  - `sourceType` (string) - `'module'` or `'script'` (default: `'module'`)
+  - `globals` (object) - Global variables available in code
+  
+  **Example:**
+  ```javascript
+  languageOptions: {
+    ecmaVersion: 2023,
+    sourceType: 'module',
+  }
+  ```
+</ParamField>
+
+### Advanced options
+
+<ParamField path="extends" type="string | string[]" optional>
+  Extend from shared configuration presets or other config files.
+  
+  **Example:**
+  ```javascript
+  extends: 'vibrant-config-recommended'
+  ```
+</ParamField>
+
+<ParamField path="plugins" type="object" optional>
+  Load custom plugins that provide additional rules.
+  
+  **Example:**
+  ```javascript
+  plugins: {
+    'custom': require('vibrant-plugin-custom')
+  }
+  ```
+</ParamField>
+
+<ParamField path="settings" type="object" optional>
+  Shared settings available to all rules.
+  
+  **Example:**
+  ```javascript
+  settings: {
+    react: {
+      version: 'detect'
+    }
+  }
+  ```
+</ParamField>
+
+## Preset configurations
+
+Vibrant includes built-in presets for different use cases:
+
+### Strict preset
+
+All rules as errors, best for production codebases:
+
+```javascript
+const { presets } = require('vibrant');
+
+module.exports = {
+  ...presets.strict,
+};
+```
+
+### Relaxed preset
+
+Most rules as warnings, good for prototyping:
+
+```javascript
+const { presets } = require('vibrant');
+
+module.exports = {
+  ...presets.relaxed,
+};
+```
+
+### Minimal preset
+
+Only critical bugs, minimal noise:
+
+```javascript
+const { presets } = require('vibrant');
+
+module.exports = {
+  ...presets.minimal,
+};
+```
+
+### AI preset
+
+Optimized for AI-generated code:
+
+```javascript
+const { presets } = require('vibrant');
+
+module.exports = {
+  ...presets.ai,
+};
+```
+
+## Complete example
+
+```javascript vibrant.config.js
+module.exports = {
+  // File patterns
+  files: ['src/**/*.ts', 'src/**/*.tsx'],
+  ignore: [
+    'node_modules',
+    'dist',
+    'build',
+    '**/*.test.ts',
+    '**/*.spec.ts',
+  ],
+  
+  // Output format
+  format: 'pretty',
+  
+  // AI provider
+  provider: 'openrouter',
+  
+  // Rule configuration
+  rules: {
+    // Errors
+    'no-explicit-any': 'error',
+    'unimplemented-error': 'error',
+    'empty-function-body': 'error',
+    'empty-catch-block': 'error',
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    'no-await-in-loop': 'error',
+    'no-unreachable': 'error',
+    'use-isnan': 'error',
+    
+    // Warnings
+    'console-log-debugging': 'warn',
+    'ai-comment-emojis': 'warn',
+    'ai-todo-comments': 'warn',
+    
+    // Disabled
+    'magic-numbers': 'off',
+  },
+  
+  // Language options
+  languageOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+  },
+};
+```
+
+## TypeScript example
+
+```typescript vibrant.config.ts
+import type { Config } from 'vibrant';
+
+const config: Config = {
+  ignore: ['node_modules', 'dist'],
+  format: 'pretty',
+  provider: 'openrouter',
+  rules: {
+    'no-explicit-any': 'error',
+    'console-log-debugging': 'warn',
+  },
+};
+
+export default config;
+```
+
+## See also
+
+- [Rule configuration](/api/config/rule-config)
+- [Available rules](/api/commands/rules)
+- [Init command](/api/commands/init)

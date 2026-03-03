@@ -1,0 +1,528 @@
+---
+title: Custom rules
+description: Understand Vibrant's rule system and how to contribute new detection rules
+---
+
+Vibrant currently provides 15+ built-in rules for detecting AI-generated code patterns. While the CLI doesn't support loading external custom rules yet, you can contribute new rules to the project or understand how the rule system works.
+
+## Understanding Vibrant rules
+
+Vibrant rules are TypeScript-based linting rules that analyze code using the TypeScript AST (Abstract Syntax Tree). Each rule follows a standard structure defined by the `Rule` interface.
+
+### Rule interface
+
+From `apps/cli/src/core/types.ts:146-151`:
+
+```typescript
+export interface RuleModule {
+  meta: RuleMeta;
+  create(context: RuleContext): RuleListener;
+}
+
+export type Rule = RuleModule;
+```
+
+Every rule has two main parts:
+
+1. **`meta`**: Metadata describing the rule
+2. **`create`**: Function that returns AST node listeners
+
+### Rule metadata
+
+The `RuleMeta` interface defines rule properties:
+
+```typescript apps/cli/src/core/types.ts
+export interface RuleMeta {
+  type: RuleType;              // "problem" | "suggestion" | "layout"
+  docs: RuleDocs;              // Documentation
+  fixable?: "code" | "whitespace";  // Can it be auto-fixed?
+  hasSuggestions?: boolean;    // Provides suggestions?
+  schema?: JSONSchema[];       // Configuration schema
+  deprecated?: boolean;        // Is it deprecated?
+  replacedBy?: string[];       // Replacement rules
+  messages?: Record<string, string>;  // Error messages
+}
+```
+
+### Rule categories
+
+Vibrant organizes rules into categories from `apps/cli/src/rules/index.ts:18-59`:
+
+<CodeGroup>
+
+```typescript Type safety
+// Detect type-related issues
+"no-explicit-any": noExplicitAny,
+```
+
+```typescript Incomplete code
+// Code that will crash at runtime
+"unimplemented-error": unimplementedError,
+"empty-function-body": emptyFunctionBody,
+```
+
+```typescript Security
+// Security vulnerabilities
+"hardcoded-credentials": hardcodedCredentials,
+"no-sql-injection": noSqlInjection,
+"no-unsafe-inner-html": noUnsafeInnerHtml,
+```
+
+```typescript Performance
+// Performance issues
+"no-await-in-loop": noAwaitInLoop,
+```
+
+```typescript Possible bugs
+// Logic errors and bugs
+"no-unreachable": noUnreachable,
+"use-isnan": useIsnan,
+```
+
+```typescript AI telltales
+// Patterns common in AI-generated code
+"ai-comment-emojis": aiCommentEmojis,
+"ai-todo-comments": aiTodoComments,
+```
+
+</CodeGroup>
+
+## Built-in rules
+
+Vibrant includes these detection rules:
+
+| Rule | Category | Severity | Fixable |
+|------|----------|----------|----------|
+| `no-explicit-any` | Type Safety | error | ✓ |
+| `unimplemented-error` | Incomplete Code | error | ✗ |
+| `empty-function-body` | Incomplete Code | error | ✗ |
+| `empty-catch-block` | Error Handling | error | ✗ |
+| `hardcoded-credentials` | Security | error | ✗ |
+| `no-sql-injection` | Security | error | ✗ |
+| `no-unsafe-inner-html` | Security | error | ✗ |
+| `no-await-in-loop` | Performance | error | ✗ |
+| `no-unreachable` | Possible Bugs | error | ✗ |
+| `use-isnan` | Possible Bugs | error | ✗ |
+| `console-log-debugging` | Code Quality | warning | ✗ |
+| `ai-comment-emojis` | AI Telltales | warning | ✗ |
+| `ai-todo-comments` | AI Telltales | warning | ✗ |
+| `magic-numbers` | Best Practices | warning | ✗ |
+
+View all rules with:
+
+```bash
+vibrant rules
+```
+
+## Rule anatomy
+
+Let's examine a complete rule to understand how they work.
+
+### Example: no-explicit-any rule
+
+From `apps/cli/src/rules/no-explicit-any.ts`:
+
+<Steps>
+
+<Step title="Define metadata">
+  ```typescript
+  const meta: RuleMeta = {
+    type: "suggestion",
+    docs: {
+      description: "Disallow the use of the `any` type",
+      category: "Type Safety",
+      recommended: true,
+      url: "https://vibrant.dev/rules/no-explicit-any",
+    },
+    fixable: "code",
+    hasSuggestions: true,
+    schema: [],
+    messages: {
+      unexpectedAny: "'any' type defeats TypeScript's type safety...",
+      suggestUnknown: "Replace with 'unknown' type",
+      suggestNever: "Replace with 'never' type",
+    },
+  };
+  ```
+</Step>
+
+<Step title="Create AST visitor">
+  ```typescript
+  function create(context: RuleContext): RuleListener {
+    return {
+      Identifier(node: ts.Node) {
+        if (!ts.isIdentifier(node)) return;
+        if (node.text !== "any") return;
+        
+        // Check if this identifier is used as a type
+        const parent = node.parent;
+        if (
+          ts.isTypeReferenceNode(parent) ||
+          ts.isVariableDeclaration(parent) ||
+          // ... other type contexts
+        ) {
+          // Report the issue
+        }
+      },
+    };
+  }
+  ```
+</Step>
+
+<Step title="Report issues with fixes">
+  ```typescript
+  context.report({
+    node,
+    messageId: "unexpectedAny",
+    fix(fixer) {
+      return fixer.replaceText(node, "unknown");
+    },
+    suggest: [
+      {
+        messageId: "suggestUnknown",
+        fix(fixer) {
+          return fixer.replaceText(node, "unknown");
+        },
+      },
+      {
+        messageId: "suggestNever",
+        fix(fixer) {
+          return fixer.replaceText(node, "never");
+        },
+      },
+    ],
+  });
+  ```
+</Step>
+
+<Step title="Export the rule">
+  ```typescript
+  const rule: Rule = {
+    meta,
+    create,
+  };
+  
+  export default rule;
+  export { meta, create };
+  ```
+</Step>
+
+</Steps>
+
+## How rules are executed
+
+The linter executes rules through AST traversal from `apps/cli/src/core/linter.ts:359-441`:
+
+```typescript
+for (const [ruleId, rule] of options.rules) {
+  // Get rule configuration
+  const config = options.ruleConfig.get(ruleId);
+  if (!config || config[0] === "off") continue;
+  
+  // Create rule context
+  const context = new RuleContextImpl(
+    filePath,
+    content,
+    sourceFile,
+    ruleOptions,
+    ruleId,
+    severity,
+    rule.meta.messages,
+  );
+  
+  // Get AST listeners from rule
+  const listener = rule.create(context);
+  
+  // Visit each AST node
+  const visit = (node: ts.Node) => {
+    context.pushAncestor(node);
+    
+    const nodeType = ts.SyntaxKind[node.kind];
+    const handler = listener[nodeType];
+    
+    if (handler) {
+      handler(node);  // Execute rule logic
+    }
+    
+    ts.forEachChild(node, visit);
+    context.popAncestor();
+  };
+  
+  visit(sourceFile);
+}
+```
+
+## Contributing rules
+
+While Vibrant doesn't support loading external custom rules, you can contribute new rules to the project.
+
+### Rule contribution process
+
+<Steps>
+
+<Step title="Identify a pattern">
+  Find a common AI-generated code pattern worth detecting:
+  
+  - Security vulnerabilities
+  - Performance issues  
+  - Type safety problems
+  - Incomplete implementations
+  - AI telltale signs
+</Step>
+
+<Step title="Create rule file">
+  Add a new file in `apps/cli/src/rules/`:
+  
+  ```typescript apps/cli/src/rules/my-new-rule.ts
+  import ts from "typescript";
+  import type { Rule, RuleContext, RuleListener } from "../core/types.js";
+  
+  const meta = {
+    type: "problem",
+    docs: {
+      description: "Detect [specific pattern]",
+      category: "Security",
+      recommended: true,
+    },
+    messages: {
+      detected: "[Explanation of the issue]",
+    },
+  };
+  
+  function create(context: RuleContext): RuleListener {
+    return {
+      // Your AST visitors
+    };
+  }
+  
+  const rule: Rule = { meta, create };
+  export default rule;
+  ```
+</Step>
+
+<Step title="Register the rule">
+  Add to `apps/cli/src/rules/index.ts`:
+  
+  ```typescript
+  import myNewRule from "./my-new-rule.js";
+  
+  export const rules: Record<string, Rule> = {
+    // ... existing rules
+    "my-new-rule": myNewRule,
+  };
+  
+  export const ruleDescriptions = {
+    // ... existing descriptions
+    "my-new-rule": {
+      description: "Brief description",
+      why: "Why this is important",
+      severity: "error",
+      category: "Security",
+    },
+  };
+  ```
+</Step>
+
+<Step title="Submit pull request">
+  Contribute your rule to the repository:
+  
+  ```bash
+  git clone https://github.com/francogalfre/vibrant.git
+  cd vibrant
+  git checkout -b feature/my-new-rule
+  
+  # Make your changes
+  
+  git add .
+  git commit -m "feat: add my-new-rule for detecting X"
+  git push origin feature/my-new-rule
+  ```
+  
+  Then create a pull request on GitHub.
+</Step>
+
+</Steps>
+
+### Rule development tips
+
+<CodeGroup>
+
+```typescript Use TypeScript AST helpers
+import ts from "typescript";
+
+// Check node types
+if (ts.isCallExpression(node)) { }
+if (ts.isFunctionDeclaration(node)) { }
+if (ts.isVariableDeclaration(node)) { }
+
+// Navigate the tree
+const parent = node.parent;
+const children = node.getChildren();
+```
+
+```typescript Access source code
+function create(context: RuleContext): RuleListener {
+  return {
+    CallExpression(node: ts.Node) {
+      const sourceCode = context.getSourceCode();
+      const text = sourceCode.getText(node);
+      const comments = sourceCode.getCommentsBefore(node);
+    },
+  };
+}
+```
+
+```typescript Use message templates
+const meta = {
+  messages: {
+    detected: "Found {{pattern}} at {{location}}",
+  },
+};
+
+context.report({
+  node,
+  messageId: "detected",
+  data: {
+    pattern: "hardcoded password",
+    location: "line 42",
+  },
+});
+```
+
+</CodeGroup>
+
+## Rule context API
+
+The `RuleContext` provides utilities for rule authors:
+
+```typescript apps/cli/src/core/types.ts
+export interface RuleContext {
+  file: string;                          // Current file path
+  source: string;                        // Source code
+  sourceFile: SourceFile;                // TypeScript AST
+  options: unknown[];                    // Rule options
+  
+  report(descriptor: ReportDescriptor): void;  // Report issue
+  getAncestors(): Node[];                      // Get parent nodes
+  getSourceCode(): SourceCode;                 // Access source
+  getFilename(): string;                       // Get filename
+}
+```
+
+### Report descriptor
+
+```typescript apps/cli/src/core/types.ts
+export interface ReportDescriptor {
+  messageId?: string;              // Message template ID
+  message?: string;                // Direct message
+  node?: Node;                     // AST node
+  loc?: SourceLocation;            // Location
+  data?: Record<string, string>;   // Template data
+  fix?(fixer: RuleFixer): Fix | Iterable<Fix> | null;  // Auto-fix
+  suggest?: SuggestionDescriptor[];  // Alternative fixes
+}
+```
+
+## Future: Plugin system
+
+<Note>
+Vibrant is planning to support a plugin system for loading custom rules. This will allow:
+
+- Installing rules from npm packages
+- Loading rules from local files
+- Configuring custom rule sets
+- Sharing rules across projects
+
+Follow development at: https://github.com/francogalfre/vibrant
+</Note>
+
+### Planned plugin interface
+
+```typescript Future plugin system
+export interface Plugin {
+  meta?: {
+    name: string;
+    version: string;
+  };
+  rules?: Record<string, Rule>;
+  configs?: Record<string, Config>;
+  processors?: Record<string, Processor>;
+}
+```
+
+Stay tuned for updates on the plugin system!
+
+## Examples
+
+### Simple pattern detection
+
+```typescript Detect eval() usage
+import ts from "typescript";
+import type { Rule, RuleContext, RuleListener } from "../core/types.js";
+
+const meta = {
+  type: "problem" as const,
+  docs: {
+    description: "Disallow use of eval()",
+    category: "Security",
+    recommended: true,
+  },
+  messages: {
+    noEval: "eval() is dangerous and should not be used",
+  },
+};
+
+function create(context: RuleContext): RuleListener {
+  return {
+    CallExpression(node: ts.Node) {
+      if (!ts.isCallExpression(node)) return;
+      
+      const expr = node.expression;
+      if (ts.isIdentifier(expr) && expr.text === "eval") {
+        context.report({
+          node,
+          messageId: "noEval",
+        });
+      }
+    },
+  };
+}
+
+const rule: Rule = { meta, create };
+export default rule;
+```
+
+### Pattern with auto-fix
+
+```typescript Fix console.log statements
+function create(context: RuleContext): RuleListener {
+  return {
+    CallExpression(node: ts.Node) {
+      if (!ts.isCallExpression(node)) return;
+      
+      const expr = node.expression;
+      if (
+        ts.isPropertyAccessExpression(expr) &&
+        ts.isIdentifier(expr.expression) &&
+        expr.expression.text === "console" &&
+        expr.name.text === "log"
+      ) {
+        context.report({
+          node,
+          messageId: "noConsoleLog",
+          fix(fixer) {
+            // Remove the entire statement
+            return fixer.remove(node.parent!);
+          },
+        });
+      }
+    },
+  };
+}
+```
+
+## Related
+
+- [Configuration](/configuration/rules) - Configure rule severity
+- [Ignoring issues](/advanced/ignoring-issues) - Disable specific rules
+- [Contributing guide](https://github.com/francogalfre/vibrant/blob/main/CONTRIBUTING.md) - Contribute rules

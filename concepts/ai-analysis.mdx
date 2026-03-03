@@ -1,0 +1,326 @@
+---
+title: AI-powered analysis
+description: Deep code understanding using LLMs to detect patterns static analysis can't catch
+---
+
+AI-powered analysis uses Large Language Models to understand your code's **intent and context**, detecting issues that require semantic understanding beyond pattern matching.
+
+## How it differs from static analysis
+
+| Feature | Static Analysis | AI Analysis |
+|---------|----------------|-------------|
+| **Speed** | ~200ms for 100 files | ~10-15s for 100 files |
+| **Cost** | Free, offline | Requires API key |
+| **Detection** | Syntactic patterns | Semantic understanding |
+| **Consistency** | 100% deterministic | May vary slightly |
+| **Context** | No business logic | Understands intent |
+
+<Note>
+AI analysis complements static analysis - it doesn't replace it. Use static analysis for fast, reliable checks, and AI for deeper insights.
+</Note>
+
+## When to use AI analysis
+
+Enable AI analysis when you need:
+
+- **Context-aware detection** - Understanding why code is problematic
+- **Architectural insights** - Detecting design issues
+- **Business logic validation** - Checking if code matches requirements
+- **Code review assistance** - Getting a second opinion on pull requests
+
+```bash
+# Enable AI analysis
+vibrant . --ai
+
+# Use specific provider
+vibrant . --ai --provider openrouter
+```
+
+## The Smart Summarizer
+
+Before sending code to the AI, Vibrant uses a **Smart Summarizer** that reduces token usage by 50-60% while maintaining detection accuracy.
+
+### How it works
+
+```typescript
+// From apps/cli/src/ai/summarizer.ts
+export function summarizeFile(
+  filePath: string,
+  content: string
+): CodeSummary {
+  const lines = content.split("\n");
+  const suspicious: Array<{ line: number; code: string; type: string }> = [];
+  const functions: Array<{ line: number; signature: string }> = [];
+  
+  // Detect suspicious patterns
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (hasVibecodingPattern(line)) {
+      suspicious.push({
+        line: i + 1,
+        code: line.trim(),
+        type: getPatternType(line)
+      });
+    }
+  }
+  
+  // Extract function signatures using TypeScript AST
+  const sourceFile = ts.createSourceFile(filePath, content, ...);
+  // ... extract functions, classes, methods
+  
+  return buildSmartSummary(filePath, lines.length, suspicious, functions);
+}
+```
+
+### Summarized output format
+
+Instead of sending entire files, Vibrant sends condensed summaries:
+
+```
+### src/api.ts
+Lines: 245
+
+Suspicious:
+L24|const API_KEY = "sk-abc";  // secret
+L45|console.log("debug");      // console
+L89|} catch (e) {}             // empty-catch
+
+Functions:
+L10|async fn fetchData(url: string)
+L60|fn processResult(data: any)
+L120|class ApiClient
+L145|async handleRequest(req, res)
+```
+
+<Tip>
+The summarizer focuses AI attention on suspicious code while preserving function structure for context.
+</Tip>
+
+### Pattern detection
+
+The summarizer detects vibecoding patterns:
+
+```typescript
+// From apps/cli/src/ai/summarizer.ts
+function hasVibecodingPattern(line: string): boolean {
+  const patterns = [
+    /console\.(log|error|warn|debug|info)/,
+    /debugger\b/,
+    /\/\/\s*(TODO|FIXME|HACK|XXX|BUG)/i,
+    /throw\s+new\s+Error\s*\(\s*["'].*(?:not implemented|todo|fix)/i,
+    /:\s*any\b/,
+    /@ts-ignore/,
+    /(api[_-]?key|apikey|secret|password|token)\s*[=:]/i,
+    /(["'])(?:sk-[a-zA-Z0-9]{20,}|xox[baprs]-[a-zA-Z0-9-]{10,})\1/,
+    /\b(?:data|result|item|temp|value|obj|arr)\s*[=:]/i,
+    /catch\s*\([^)]*\)\s*\{\s*\}/,
+  ];
+  return patterns.some(p => p.test(line));
+}
+```
+
+## AI provider integration
+
+Vibrant supports multiple AI providers:
+
+```typescript
+// From apps/cli/src/commands/lint.ts
+const { analyze, detectProvider } = await import("../ai/index.js");
+const config = detectProvider(aiProvider);
+
+const result = await analyze(config, filesToAnalyze, { 
+  useSummarizer: true, 
+  verbose: false,
+  maxChunkTokens: 1500,
+  isSingleFile,
+});
+```
+
+<Accordion title="Supported providers">
+
+| Provider | Environment Variable | Free Tier |
+|----------|---------------------|----------|
+| **OpenRouter** | `OPENROUTER_API_KEY` | ✅ Free models |
+| **Gemini** | `GOOGLE_GENERATIVE_AI_API_KEY` | ✅ Free tier |
+| **OpenAI** | `OPENAI_API_KEY` | ❌ Paid |
+| **Claude** | `ANTHROPIC_API_KEY` | ❌ Paid |
+| **Ollama** | `OLLAMA_HOST` | ✅ Local, free |
+
+</Accordion>
+
+## AI prompt engineering
+
+Vibrant uses carefully crafted prompts to guide AI analysis:
+
+```typescript
+// From apps/cli/src/ai/prompts.ts
+export const SYSTEM_PROMPT = `You are Vibrant, a security-focused code reviewer 
+specializing in detecting "vibecoding" (AI-generated code that wasn't properly reviewed).
+
+CRITICAL: Extract EXACT line numbers from "L123|code" format (123 = line number).
+CRITICAL: Always respond with valid JSON only - no markdown, no explanations.
+
+IMPORTANT DISTINCTIONS:
+- console.log in CLI tools, scripts, or test files is CORRECT
+- Regex patterns inside strings are NOT issues
+- Focus on REAL problems that cause bugs or security issues
+- Be selective - not every minor issue deserves reporting`;
+```
+
+### Detection categories
+
+The AI analyzes code for:
+
+1. **Security issues** (always reported)
+   - Hardcoded credentials
+   - SQL injection vulnerabilities
+   - XSS vulnerabilities
+   - Exposed sensitive data
+
+2. **Bugs** (always reported)
+   - Empty catch blocks
+   - Unhandled promise rejections
+   - Null/undefined access
+   - Race conditions
+
+3. **Code quality** (significant issues only)
+   - Functions over 100 lines
+   - Deeply nested code (6+ levels)
+   - Excessive use of `any` type
+
+4. **AI telltales** (excessive occurrences)
+   - Multiple console.log statements
+   - Generic variable names used repeatedly
+   - Many TODO/FIXME comments
+
+## AI analysis output
+
+AI analysis provides three key insights:
+
+```typescript
+// From apps/cli/src/commands/lint.ts
+const result = await analyze(config, filesToAnalyze, options);
+
+// result.summary - Overall code health
+// result.highlights - Most important issues
+// result.recommendations - Actionable next steps
+```
+
+### Example output
+
+```
+🔍 Issues Found
+
+  ✕ src/api.ts:24:5
+    └─ hardcoded-credentials
+       API key hardcoded in source code
+       
+       24|const API_KEY = "sk-abc123";
+       
+       → Use environment variables instead
+
+📊 Diagnosis
+
+  The codebase shows several security concerns. Hardcoded credentials
+  and unhandled errors could lead to data exposure and silent failures.
+
+⚡ Key Findings
+
+  • Hardcoded API key in src/api.ts could expose credentials
+  • 3 empty catch blocks swallow errors without logging
+  • Multiple console.log statements in production code
+
+💡 Recommendations
+
+  → Move all credentials to environment variables
+  → Add proper error handling with logging
+  → Replace console.log with structured logger
+```
+
+## Incremental caching
+
+Vibrant caches AI analysis results to avoid re-analyzing unchanged files:
+
+```typescript
+// From apps/cli/src/ai/auto-cache.ts
+export async function getModifiedFiles(
+  files: AIFileContent[]
+): Promise<CacheResult> {
+  const cache = await loadCache();
+  const modified: AIFileContent[] = [];
+  const cached: AIFileContent[] = [];
+  
+  for (const file of files) {
+    const hash = hashContent(file.content);
+    const cached = cache[file.path];
+    
+    if (cached?.hash === hash) {
+      cached.push(file);
+    } else {
+      modified.push(file);
+    }
+  }
+  
+  return {
+    modified,
+    cached,
+    stats: {
+      total: files.length,
+      modified: modified.length,
+      cached: cached.length
+    }
+  };
+}
+```
+
+<Info>
+Caching can reduce analysis time by 80% on subsequent runs when most files haven't changed.
+</Info>
+
+## Performance considerations
+
+| Files | Estimated Time | Token Usage |
+|-------|---------------|-------------|
+| 1 file | ~3-5s | ~500 tokens |
+| 10 files | ~5-8s | ~2,000 tokens |
+| 50 files | ~10s | ~8,000 tokens |
+| 100 files | ~15s | ~15,000 tokens |
+
+<Warning>
+AI analysis consumes API credits. Use the `--cache` flag to avoid re-analyzing unchanged files.
+</Warning>
+
+## Best practices
+
+1. **Use static analysis first** - Run `vibrant .` without `--ai` for fast checks
+2. **Enable AI for PRs** - Deep analysis on important changes
+3. **Cache results** - Use `--cache` to skip unchanged files
+4. **Choose free providers** - Start with OpenRouter or Gemini
+5. **Review AI suggestions** - AI can have false positives too
+
+## Running AI analysis
+
+```bash
+# Basic AI analysis
+vibrant . --ai
+
+# With specific provider
+vibrant . --ai --provider openrouter
+
+# With caching enabled
+vibrant . --ai --cache
+
+# Single file deep analysis
+vibrant src/api.ts --ai
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Static analysis" icon="magnifying-glass" href="/concepts/static-analysis">
+    Learn about fast pattern-based detection
+  </Card>
+  <Card title="Auto-fix" icon="wrench" href="/concepts/auto-fix">
+    Automatically fix detected issues
+  </Card>
+</CardGroup>

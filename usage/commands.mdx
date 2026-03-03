@@ -1,0 +1,154 @@
+---
+title: Commands
+description: All CLI commands available in Vibrant
+---
+
+Vibrant provides three main commands for detecting AI-generated code patterns in your codebase.
+
+## vibrant [path]
+
+Analyze files or directories for vibecode patterns.
+
+```bash
+vibrant .
+vibrant src/
+vibrant src/components/Button.tsx
+```
+
+<ParamField path="path" type="string" default=".">
+  Path to analyze (file or directory). Defaults to current directory.
+</ParamField>
+
+### Options
+
+The analyze command supports several options:
+
+- `--format` - Output format (pretty, compact, plan, json)
+- `--ignore` - Comma-separated patterns to ignore
+- `--fix` - Automatically fix problems
+- `--ai` - Enable AI-powered analysis
+- `--provider` - AI provider (openai, claude, gemini, ollama, openrouter)
+- `--no-cache` - Disable analysis cache
+
+See [Options](/usage/options) for detailed information.
+
+### Examples
+
+<CodeGroup>
+
+```bash Basic analysis
+vibrant .
+```
+
+```bash Analyze specific directory
+vibrant src/components
+```
+
+```bash With AI analysis
+vibrant . --ai --provider openrouter
+```
+
+```bash Auto-fix issues
+vibrant . --fix
+```
+
+```bash Custom format
+vibrant . --format compact
+```
+
+```bash Ignore patterns
+vibrant . --ignore "test/**,*.spec.ts"
+```
+
+</CodeGroup>
+
+## vibrant init
+
+Create a `vibrant.config.js` configuration file in the current directory.
+
+```bash
+vibrant init
+```
+
+This command generates a configuration file with sensible defaults:
+
+```javascript vibrant.config.js
+module.exports = {
+  // Directories to ignore during analysis
+  ignore: ['node_modules', '.git', 'dist', '.next', 'build', 'coverage'],
+  
+  // Output format: 'pretty', 'compact' or 'plan'
+  format: 'pretty',
+  
+  // AI Provider configuration (optional)
+  // provider: 'openrouter', // 'openai' | 'claude' | 'gemini' | 'ollama' | 'openrouter'
+};
+```
+
+<Note>
+If `vibrant.config.js` already exists, the command will skip creation and display a warning.
+</Note>
+
+### What gets configured
+
+The `init` command sets up:
+
+- **ignore** - Common directories to exclude (node_modules, dist, build, etc.)
+- **format** - Default output format set to 'pretty'
+- **provider** - Optional AI provider configuration (commented out by default)
+
+After initialization, run `vibrant .` to start analyzing your code.
+
+## vibrant rules
+
+List all available detection rules.
+
+```bash
+vibrant rules
+```
+
+This displays a formatted list of all rules with their severity levels and descriptions.
+
+### Output format
+
+```
+Available Rules
+
+✖ no-explicit-any        Explicit use of the `any` type
+✖ unimplemented-error    Incomplete code
+✖ empty-function-body    Empty function bodies
+✖ empty-catch-block      Empty catch blocks
+✖ hardcoded-credentials  Hardcoded credentials in code
+✖ no-sql-injection       SQL injection vulnerabilities
+✖ no-unsafe-inner-html   Unsafe innerHTML usage
+✖ no-await-in-loop       Await inside loops
+✖ no-unreachable         Unreachable code
+✖ use-isnan              Direct comparison with NaN
+⚠ console-log-debugging  Console.log statements
+```
+
+<Info>
+Rules marked with ✖ are errors, while ⚠ indicates warnings.
+</Info>
+
+## Global options
+
+These options work with all commands:
+
+<ParamField path="--version" type="flag">
+  Display version number
+  
+  ```bash
+  vibrant --version
+  vibrant -V
+  ```
+</ParamField>
+
+<ParamField path="--help" type="flag">
+  Display help for command
+  
+  ```bash
+  vibrant --help
+  vibrant -h
+  ```
+</ParamField>

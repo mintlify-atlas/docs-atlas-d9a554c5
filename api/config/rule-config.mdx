@@ -1,0 +1,342 @@
+---
+title: Rule configuration
+description: Configure individual rule severity and options
+---
+
+Rules in Vibrant can be configured individually to control their severity level and behavior. This allows you to customize which issues are treated as errors, warnings, or disabled entirely.
+
+## Severity levels
+
+Each rule can be set to one of four severity levels:
+
+<ResponseField name="error" type="string">
+  The rule violation is treated as an error. Vibrant will exit with code 1 if any errors are found.
+</ResponseField>
+
+<ResponseField name="warn" type="string">
+  The rule violation is treated as a warning. Warnings are reported but don't cause Vibrant to fail.
+</ResponseField>
+
+<ResponseField name="info" type="string">
+  The rule violation is informational only. Useful for tracking patterns without enforcing them.
+</ResponseField>
+
+<ResponseField name="off" type="string">
+  The rule is completely disabled and won't be checked.
+</ResponseField>
+
+## Configuration format
+
+Rules are configured in the `rules` object of `vibrant.config.js`:
+
+### String format
+
+The simplest way to configure a rule is with a string:
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    'no-explicit-any': 'error',
+    'console-log-debugging': 'warn',
+    'magic-numbers': 'off',
+  },
+};
+```
+
+### Array format
+
+For rules that accept additional options, use an array:
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    'no-explicit-any': ['error'],
+    'console-log-debugging': ['warn'],
+  },
+};
+```
+
+The first element is the severity level, followed by any rule-specific options.
+
+## Rule categories
+
+Vibrant's rules are organized into categories based on what they detect:
+
+### Type safety
+
+Detect unsafe type usage in TypeScript:
+
+```javascript
+rules: {
+  'no-explicit-any': 'error',  // Disallow explicit 'any' type
+}
+```
+
+### Incomplete code
+
+Find unfinished implementations:
+
+```javascript
+rules: {
+  'unimplemented-error': 'error',    // Throws "not implemented"
+  'empty-function-body': 'error',    // Empty function bodies
+}
+```
+
+### Error handling
+
+Catch poor error handling patterns:
+
+```javascript
+rules: {
+  'empty-catch-block': 'error',  // Empty catch blocks that ignore errors
+}
+```
+
+### Security
+
+Identify security vulnerabilities:
+
+```javascript
+rules: {
+  'hardcoded-credentials': 'error',   // Hardcoded API keys, passwords
+  'no-sql-injection': 'error',        // SQL injection risks
+  'no-unsafe-inner-html': 'error',    // XSS vulnerabilities
+}
+```
+
+### Performance
+
+Spot performance issues:
+
+```javascript
+rules: {
+  'no-await-in-loop': 'error',  // Await in loops (use Promise.all)
+}
+```
+
+### Possible bugs
+
+Find logic errors:
+
+```javascript
+rules: {
+  'no-unreachable': 'error',  // Unreachable code
+  'use-isnan': 'error',       // Incorrect NaN comparisons
+}
+```
+
+### Code quality
+
+Detect debugging artifacts:
+
+```javascript
+rules: {
+  'console-log-debugging': 'warn',  // Debug console statements
+}
+```
+
+### AI telltales
+
+Identify AI-generated code patterns:
+
+```javascript
+rules: {
+  'ai-comment-emojis': 'warn',   // Emojis in comments
+  'ai-todo-comments': 'warn',    // Excessive TODOs
+}
+```
+
+### Best practices
+
+Enforce code quality standards:
+
+```javascript
+rules: {
+  'magic-numbers': 'warn',  // Unnamed numeric constants
+}
+```
+
+## Default configuration
+
+When no configuration file is present, Vibrant uses these defaults:
+
+```javascript
+{
+  rules: {
+    // Type safety - CRITICAL
+    'no-explicit-any': 'error',
+    
+    // Incomplete code - CRITICAL  
+    'unimplemented-error': 'error',
+    'empty-function-body': 'error',
+    
+    // Error handling - CRITICAL
+    'empty-catch-block': 'error',
+    
+    // Security - CRITICAL
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    
+    // Performance - CRITICAL
+    'no-await-in-loop': 'error',
+    
+    // Possible bugs - CRITICAL
+    'no-unreachable': 'error',
+    'use-isnan': 'error',
+    
+    // Debug code - WARNING
+    'console-log-debugging': 'warn',
+  }
+}
+```
+
+## Examples
+
+### Strict configuration
+
+Treat everything as an error:
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    'no-explicit-any': 'error',
+    'unimplemented-error': 'error',
+    'empty-function-body': 'error',
+    'empty-catch-block': 'error',
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    'no-await-in-loop': 'error',
+    'no-unreachable': 'error',
+    'use-isnan': 'error',
+    'console-log-debugging': 'error',
+    'ai-comment-emojis': 'error',
+    'ai-todo-comments': 'error',
+    'magic-numbers': 'error',
+  },
+};
+```
+
+### Relaxed configuration
+
+More warnings, fewer errors (good for prototyping):
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    'no-explicit-any': 'warn',
+    'unimplemented-error': 'warn',
+    'empty-function-body': 'warn',
+    'empty-catch-block': 'warn',
+    'hardcoded-credentials': 'error',  // Security always error
+    'no-sql-injection': 'error',       // Security always error
+    'no-unsafe-inner-html': 'error',   // Security always error
+    'no-await-in-loop': 'warn',
+    'no-unreachable': 'warn',
+    'use-isnan': 'error',
+    'console-log-debugging': 'warn',
+    'ai-comment-emojis': 'off',
+    'ai-todo-comments': 'off',
+    'magic-numbers': 'off',
+  },
+};
+```
+
+### Minimal configuration
+
+Only critical bugs:
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    'no-explicit-any': 'off',
+    'unimplemented-error': 'error',
+    'empty-function-body': 'off',
+    'empty-catch-block': 'warn',
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    'no-await-in-loop': 'off',
+    'no-unreachable': 'error',
+    'use-isnan': 'error',
+    'console-log-debugging': 'off',
+    'ai-comment-emojis': 'off',
+    'ai-todo-comments': 'off',
+    'magic-numbers': 'off',
+  },
+};
+```
+
+### Security-focused configuration
+
+Prioritize security issues:
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    // Security rules as errors
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    
+    // Everything else as warnings or off
+    'no-explicit-any': 'warn',
+    'unimplemented-error': 'warn',
+    'empty-function-body': 'off',
+    'empty-catch-block': 'warn',
+    'no-await-in-loop': 'off',
+    'no-unreachable': 'warn',
+    'use-isnan': 'warn',
+    'console-log-debugging': 'off',
+  },
+};
+```
+
+## Overriding default rules
+
+You only need to specify rules you want to change from the defaults:
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    // Keep all defaults, but...
+    'console-log-debugging': 'off',  // Allow console.log
+    'magic-numbers': 'warn',          // Enable magic number warnings
+  },
+};
+```
+
+## Disabling rules inline
+
+You can disable rules for specific lines or files using comments:
+
+### Disable for next line
+
+```typescript
+// vibrant-disable-next-line no-explicit-any
+const data: any = fetchData();
+```
+
+### Disable for entire file
+
+```typescript
+/* vibrant-disable no-explicit-any */
+
+// Rest of file...
+```
+
+### Disable multiple rules
+
+```typescript
+// vibrant-disable-next-line no-explicit-any, console-log-debugging
+const data: any = fetchData();
+console.log(data);
+```
+
+## See also
+
+- [Configuration file reference](/api/config/config-file)
+- [Available rules](/api/commands/rules)
+- [Analyze command](/api/commands/analyze)

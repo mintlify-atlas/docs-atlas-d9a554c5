@@ -1,0 +1,234 @@
+---
+title: OpenRouter setup
+description: Use OpenRouter's free AI models with Vibrant CLI for code analysis
+---
+
+OpenRouter provides access to multiple AI models through a single API, including several free models perfect for code analysis with Vibrant CLI.
+
+## Why OpenRouter?
+
+- **Free models available** - No credit card required for free tier models
+- **Multiple models** - Automatically fallback to different models if one fails
+- **Simple setup** - Single API key for access to multiple providers
+- **Good quality** - Free models perform well for code analysis tasks
+
+## Get an API key
+
+<Steps>
+  <Step title="Create an account">
+    Visit [openrouter.ai](https://openrouter.ai) and sign up for a free account.
+  </Step>
+  
+  <Step title="Get your API key">
+    Navigate to [Keys](https://openrouter.ai/keys) and create a new API key.
+  </Step>
+  
+  <Step title="Copy your key">
+    Your key will look like `sk-or-v1-...`. Keep it secure.
+  </Step>
+</Steps>
+
+## Setup
+
+### Option 1: Environment variable (recommended)
+
+Set the environment variable in your shell:
+
+```bash
+export OPENROUTER_API_KEY="sk-or-v1-..."
+```
+
+To make it permanent, add it to your shell profile:
+
+<CodeGroup>
+```bash ~/.bashrc or ~/.zshrc
+# Add this line to your shell profile
+export OPENROUTER_API_KEY="sk-or-v1-..."
+```
+
+```bash Windows PowerShell
+$env:OPENROUTER_API_KEY="sk-or-v1-..."
+```
+</CodeGroup>
+
+### Option 2: .env file
+
+Create a `.env` file in your project directory:
+
+```bash .env
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+<Warning>
+Add `.env` to your `.gitignore` to avoid committing your API key to version control.
+</Warning>
+
+### Option 3: Configuration file
+
+Create a `vibrant.config.js` file:
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'openrouter',
+  // API key will be read from environment variable
+};
+```
+
+## Usage
+
+Run Vibrant with AI analysis:
+
+```bash
+# Auto-detect provider (if OPENROUTER_API_KEY is set)
+vibrant . --ai
+
+# Explicitly specify OpenRouter
+vibrant . --ai --provider openrouter
+```
+
+## Free models
+
+Vibrant automatically tries these free OpenRouter models in order:
+
+<AccordionGroup>
+  <Accordion title="arcee-ai/trinity-large-preview:free (default)">
+    - **Context**: 128k tokens
+    - **Quality**: Excellent for code analysis
+    - **Speed**: Fast
+    - **Best for**: General code analysis
+  </Accordion>
+  
+  <Accordion title="stepfun/step-3-5-flash:free">
+    - **Context**: 32k tokens
+    - **Quality**: Good
+    - **Speed**: Very fast
+    - **Best for**: Quick analysis of smaller codebases
+  </Accordion>
+  
+  <Accordion title="qwen/qwen3-235b-a22b-thinking-2507:free">
+    - **Context**: 32k tokens
+    - **Quality**: Excellent reasoning
+    - **Speed**: Medium
+    - **Best for**: Complex pattern detection
+  </Accordion>
+  
+  <Accordion title="google/gemma-3-27b-it:free">
+    - **Context**: 8k tokens
+    - **Quality**: Good
+    - **Speed**: Fast
+    - **Best for**: Small files and quick checks
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+If one model fails or hits rate limits, Vibrant automatically tries the next available model. You'll see which model is being used in the output.
+</Note>
+
+## Pricing
+
+Free tier models:
+- **Cost**: $0.00 per request
+- **Rate limits**: Varies by model (typically generous for free models)
+- **Usage limits**: Fair use policy applies
+
+Paid models are also available if you add credits to your OpenRouter account.
+
+## Example output
+
+When using OpenRouter, you'll see which model is being tried:
+
+```bash
+vibrant . --ai --provider openrouter
+```
+
+```
+🔮 Vibrant Analysis
+─────────────────────
+
+📡 AI Analysis (openrouter)
+   Trying model: arcee-ai/trinity-large-preview:free...
+
+✔ Analysis complete
+
+📋 Summary:
+The codebase contains 3 security issues and 5 code quality warnings.
+Primary concerns are hardcoded credentials and empty error handlers.
+
+🔍 Key Findings:
+  • API keys hardcoded in src/api.ts
+  • Empty catch blocks in src/utils.ts
+  • Excessive console.log statements
+
+💡 Recommendations:
+  • Move secrets to environment variables
+  • Implement proper error handling
+  • Remove debug logging before production
+
+✕ 3 errors · ⚠ 5 warnings · 48 files · 12s
+```
+
+## Troubleshooting
+
+### Error: API key not found
+
+```
+OpenRouter API key not found. Set OPENROUTER_API_KEY environment variable.
+```
+
+**Solution**: Make sure you've set the `OPENROUTER_API_KEY` environment variable:
+
+```bash
+export OPENROUTER_API_KEY="sk-or-v1-..."
+```
+
+### Error: All models failed
+
+```
+All OpenRouter models failed. Last error: rate limit exceeded
+```
+
+**Solution**: Free models have rate limits. Try again in a few minutes or use a different provider:
+
+```bash
+vibrant . --ai --provider gemini
+```
+
+### Model fallback
+
+If you see multiple "model failed" messages, Vibrant is automatically trying different models:
+
+```
+⚠ arcee-ai/trinity-large-preview:free failed: rate limit...
+   Trying model: stepfun/step-3-5-flash:free...
+✔ Analysis complete
+```
+
+This is normal behavior and ensures your analysis completes successfully.
+
+## Best practices
+
+<Steps>
+  <Step title="Use .env for local development">
+    Keep your API key in a `.env` file and add it to `.gitignore`.
+  </Step>
+  
+  <Step title="Use environment variables in CI/CD">
+    Set `OPENROUTER_API_KEY` as a secret in your CI/CD pipeline.
+  </Step>
+  
+  <Step title="Set a default provider">
+    Add `provider: 'openrouter'` to `vibrant.config.js` to avoid typing `--provider` every time.
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI providers overview" icon="layer-group" href="/ai-providers/overview">
+    Compare all available providers
+  </Card>
+  
+  <Card title="Google Gemini setup" icon="gem" href="/ai-providers/gemini">
+    Try Google's free tier for faster analysis
+  </Card>
+</CardGroup>

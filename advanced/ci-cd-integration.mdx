@@ -1,0 +1,604 @@
+---
+title: CI/CD integration
+description: Integrate Vibrant into your continuous integration and deployment pipelines
+---
+
+Vibrant is designed to run in CI/CD environments to catch AI-generated code patterns before they reach production. This guide covers integration with popular CI/CD platforms.
+
+## Exit codes
+
+Vibrant uses standard exit codes to indicate analysis results:
+
+- **Exit 0**: No errors found (warnings are acceptable)
+- **Exit 1**: Errors found or fatal error occurred
+
+```bash
+# Exit 0 - success
+vibrant .
+
+# Exit 1 - has errors
+vibrant . && echo "passed" || echo "failed"
+```
+
+<Note>
+Warnings do not cause non-zero exit codes. Only errors trigger `exit 1`.
+</Note>
+
+## GitHub Actions
+
+### Basic workflow
+
+Create `.github/workflows/vibrant.yml`:
+
+```yaml .github/workflows/vibrant.yml
+name: Vibrant Code Analysis
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  vibrant:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run Vibrant analysis
+        run: npx vibrant .
+```
+
+### With caching
+
+Improve performance by caching npm packages:
+
+```yaml .github/workflows/vibrant.yml
+jobs:
+  vibrant:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run Vibrant
+        run: npx vibrant .
+```
+
+### AI-powered analysis
+
+Use AI providers in GitHub Actions with secrets:
+
+```yaml .github/workflows/vibrant-ai.yml
+name: Vibrant AI Analysis
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  vibrant-ai:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run Vibrant with AI
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: npx vibrant . --ai --provider openrouter
+```
+
+<Steps>
+
+<Step title="Add API key to secrets">
+  Go to repository Settings → Secrets and variables → Actions → New repository secret:
+  
+  - Name: `OPENROUTER_API_KEY`
+  - Value: Your API key
+</Step>
+
+<Step title="Configure workflow">
+  Reference the secret in the `env` section of your workflow step
+</Step>
+
+<Step title="Choose appropriate provider">
+  Use cost-effective providers for CI:
+  - OpenRouter: Free models available
+  - Gemini: Generous free tier
+  - Ollama: Self-hosted option
+</Step>
+
+</Steps>
+
+### Output formatting
+
+Use compact format for cleaner CI logs:
+
+```yaml
+- name: Run Vibrant
+  run: npx vibrant . --format compact
+```
+
+Or save results as JSON artifact:
+
+```yaml
+- name: Run Vibrant
+  run: npx vibrant . --format json > vibrant-results.json
+  continue-on-error: true
+
+- name: Upload results
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: vibrant-results
+    path: vibrant-results.json
+```
+
+### Only on changed files
+
+Analyze only files changed in a PR:
+
+```yaml
+- name: Get changed files
+  id: changed-files
+  uses: tj-actions/changed-files@v41
+  with:
+    files: |
+      src/**/*.ts
+      src/**/*.tsx
+      src/**/*.js
+      src/**/*.jsx
+
+- name: Run Vibrant on changed files
+  if: steps.changed-files.outputs.any_changed == 'true'
+  run: |
+    echo "${{ steps.changed-files.outputs.all_changed_files }}" | \
+      xargs npx vibrant
+```
+
+## GitLab CI
+
+### Basic pipeline
+
+Create `.gitlab-ci.yml`:
+
+```yaml .gitlab-ci.yml
+stages:
+  - test
+
+vibrant:
+  stage: test
+  image: node:20
+  script:
+    - npx vibrant .
+  only:
+    - merge_requests
+    - main
+```
+
+### With caching
+
+```yaml .gitlab-ci.yml
+vibrant:
+  stage: test
+  image: node:20
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+  script:
+    - npm ci
+    - npx vibrant .
+  artifacts:
+    when: always
+    reports:
+      junit: vibrant-report.xml
+```
+
+### AI-powered with secrets
+
+```yaml .gitlab-ci.yml
+vibrant-ai:
+  stage: test
+  image: node:20
+  script:
+    - npx vibrant . --ai --provider openrouter
+  variables:
+    OPENROUTER_API_KEY: $OPENROUTER_API_KEY
+  only:
+    - merge_requests
+```
+
+Add the secret in GitLab:
+
+<Steps>
+
+<Step title="Navigate to CI/CD settings">
+  Project → Settings → CI/CD → Variables
+</Step>
+
+<Step title="Add variable">
+  - Key: `OPENROUTER_API_KEY`
+  - Value: Your API key
+  - Protected: ✓ (recommended)
+  - Masked: ✓ (recommended)
+</Step>
+
+</Steps>
+
+## CircleCI
+
+### Configuration
+
+Create `.circleci/config.yml`:
+
+```yaml .circleci/config.yml
+version: 2.1
+
+jobs:
+  vibrant:
+    docker:
+      - image: cimg/node:20.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-deps-{{ checksum "package-lock.json" }}
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: npm-deps-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+      - run:
+          name: Run Vibrant
+          command: npx vibrant .
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - vibrant
+```
+
+### With AI analysis
+
+```yaml
+jobs:
+  vibrant-ai:
+    docker:
+      - image: cimg/node:20.0
+    steps:
+      - checkout
+      - run:
+          name: Run Vibrant AI
+          command: npx vibrant . --ai --provider openrouter
+          environment:
+            OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+```
+
+## Jenkins
+
+### Declarative pipeline
+
+Create `Jenkinsfile`:
+
+```groovy Jenkinsfile
+pipeline {
+  agent any
+  
+  stages {
+    stage('Vibrant Analysis') {
+      steps {
+        nodejs(nodeJSInstallationName: 'Node 20') {
+          sh 'npx vibrant .'
+        }
+      }
+    }
+  }
+  
+  post {
+    always {
+      // Archive results if available
+      archiveArtifacts artifacts: 'vibrant-report.*', allowEmptyArchive: true
+    }
+  }
+}
+```
+
+### With credentials
+
+```groovy Jenkinsfile
+pipeline {
+  agent any
+  
+  environment {
+    OPENROUTER_API_KEY = credentials('openrouter-api-key')
+  }
+  
+  stages {
+    stage('Vibrant AI Analysis') {
+      steps {
+        nodejs(nodeJSInstallationName: 'Node 20') {
+          sh 'npx vibrant . --ai --provider openrouter'
+        }
+      }
+    }
+  }
+}
+```
+
+## Bitbucket Pipelines
+
+### Configuration
+
+Create `bitbucket-pipelines.yml`:
+
+```yaml bitbucket-pipelines.yml
+image: node:20
+
+pipelines:
+  default:
+    - step:
+        name: Vibrant Analysis
+        caches:
+          - node
+        script:
+          - npm ci
+          - npx vibrant .
+  
+  pull-requests:
+    '**':
+      - step:
+          name: Vibrant PR Check
+          script:
+            - npx vibrant . --format compact
+```
+
+## Travis CI
+
+### Configuration
+
+Create `.travis.yml`:
+
+```yaml .travis.yml
+language: node_js
+node_js:
+  - '20'
+
+script:
+  - npx vibrant .
+
+cache:
+  directories:
+    - node_modules
+```
+
+## Docker
+
+### Dockerfile for CI
+
+```dockerfile Dockerfile.vibrant
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+CMD ["npx", "vibrant", "."]
+```
+
+Use in any CI environment:
+
+```bash
+docker build -f Dockerfile.vibrant -t vibrant-check .
+docker run --rm vibrant-check
+```
+
+## Best practices
+
+<Steps>
+
+<Step title="Run on every PR">
+  Configure Vibrant to run on all pull requests to catch issues early:
+  
+  ```yaml
+  on:
+    pull_request:
+      branches: [main, develop]
+  ```
+</Step>
+
+<Step title="Use appropriate formats">
+  Choose formats based on your CI platform:
+  - **compact**: Minimal output for logs
+  - **json**: Parse results in scripts
+  - **pretty**: Local development
+</Step>
+
+<Step title="Cache dependencies">
+  Cache npm packages to speed up CI runs:
+  
+  ```yaml
+  - uses: actions/setup-node@v4
+    with:
+      cache: 'npm'
+  ```
+</Step>
+
+<Step title="Fail fast on errors">
+  Don't continue deployment if Vibrant finds errors:
+  
+  ```yaml
+  - name: Run Vibrant
+    run: npx vibrant .
+    # Fails build if exit code is 1
+  ```
+</Step>
+
+<Step title="Use cost-effective AI providers">
+  For AI analysis in CI, prefer providers with free tiers:
+  - OpenRouter (free models)
+  - Gemini (free tier)
+  - Self-hosted Ollama
+</Step>
+
+<Step title="Configure appropriate ignores">
+  Exclude generated files and dependencies:
+  
+  ```javascript vibrant.config.js
+  module.exports = {
+    ignore: ['dist', 'build', 'node_modules', '*.test.ts'],
+  };
+  ```
+</Step>
+
+</Steps>
+
+## Troubleshooting
+
+### CI runs too slowly
+
+<CodeGroup>
+
+```yaml Only analyze changed files
+- name: Get changed files
+  id: files
+  uses: tj-actions/changed-files@v41
+
+- name: Run on changed files only
+  run: echo "${{ steps.files.outputs.all_changed_files }}" | xargs npx vibrant
+```
+
+```yaml Disable AI for faster runs
+- name: Quick static analysis
+  run: npx vibrant . --no-ai
+```
+
+```yaml Use caching
+- uses: actions/setup-node@v4
+  with:
+    cache: 'npm'
+```
+
+</CodeGroup>
+
+### API rate limits
+
+<Warning>
+AI providers may rate-limit API requests in CI. Solutions:
+
+- Use free-tier providers (OpenRouter, Gemini)
+- Run AI analysis only on main branch
+- Self-host with Ollama
+- Implement retry logic
+
+```yaml
+- name: Run with retry
+  uses: nick-invision/retry@v2
+  with:
+    timeout_minutes: 10
+    max_attempts: 3
+    command: npx vibrant . --ai
+```
+</Warning>
+
+### Exit code handling
+
+```yaml Continue on warnings
+- name: Run Vibrant
+  run: npx vibrant .
+  continue-on-error: true  # Don't fail build on errors
+
+- name: Upload results anyway
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: vibrant-results
+    path: vibrant-report.json
+```
+
+## Examples
+
+### Complete GitHub Actions workflow
+
+```yaml .github/workflows/vibrant-complete.yml
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - run: npm ci
+      
+      - name: Vibrant static analysis
+        run: npx vibrant . --format compact
+  
+  ai-analysis:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Vibrant AI analysis
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: npx vibrant . --ai --provider openrouter --format json > results.json
+        continue-on-error: true
+      
+      - name: Upload AI results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vibrant-ai-results
+          path: results.json
+```
+
+## Related
+
+- [Configuration](/configuration/config-file) - Configure Vibrant for your project
+- [Ignoring issues](/advanced/ignoring-issues) - Skip false positives in CI
+- [CLI reference](/cli-reference/commands) - All available commands and options

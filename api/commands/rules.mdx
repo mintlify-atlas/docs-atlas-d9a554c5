@@ -1,0 +1,147 @@
+---
+title: rules
+description: List all available detection rules
+---
+
+The `vibrant rules` command displays all available rules that Vibrant uses to detect problematic code patterns.
+
+## Syntax
+
+```bash
+vibrant rules
+```
+
+## Description
+
+This command lists all detection rules with their severity level and description. Rules are organized by category:
+
+- **Type Safety** - Detect unsafe type usage
+- **Incomplete Code** - Find unfinished implementations
+- **Error Handling** - Catch poor error handling patterns
+- **Security** - Identify security vulnerabilities
+- **Performance** - Spot performance issues
+- **Possible Bugs** - Find logic errors
+- **Code Quality** - Detect debugging artifacts
+- **AI Telltales** - Identify AI-generated patterns
+
+## Example output
+
+```bash
+vibrant rules
+```
+
+```
+  Available Rules
+
+  ✖ no-explicit-any              Using 'any' defeats TypeScript's type checking
+  ✖ unimplemented-error          Code throws 'not implemented' error
+  ✖ empty-function-body          Function has no implementation
+  ✖ empty-catch-block            Catch block silently ignores errors
+  ✖ hardcoded-credentials        Potential secrets in code
+  ✖ no-sql-injection             Potential SQL injection vulnerability
+  ✖ no-unsafe-inner-html         Potential XSS vulnerability
+  ✖ no-await-in-loop             Using 'await' inside a loop
+  ✖ no-unreachable               Unreachable code after return/throw
+  ✖ use-isnan                    Using ===/!== to compare with NaN
+  ⚠ console-log-debugging        Debug console statements
+  ⚠ ai-comment-emojis            Emojis in code comments
+  ⚠ ai-todo-comments             Excessive TODO/FIXME comments
+  ⚠ magic-numbers                Unnamed numeric constants
+```
+
+## Rule severity icons
+
+- `✖` (red) - Error severity
+- `⚠` (yellow) - Warning severity
+
+## Rule categories
+
+### Type safety
+
+<ResponseField name="no-explicit-any" type="error">
+  Detects explicit use of the `any` type in TypeScript. Using `any` defeats type checking and can cause runtime crashes.
+</ResponseField>
+
+### Incomplete code
+
+<ResponseField name="unimplemented-error" type="error">
+  Finds code that throws "not implemented" errors. This code will crash when executed.
+</ResponseField>
+
+<ResponseField name="empty-function-body" type="error">
+  Detects functions with no implementation that return `undefined` unexpectedly.
+</ResponseField>
+
+### Error handling
+
+<ResponseField name="empty-catch-block" type="error">
+  Finds catch blocks that silently ignore errors without any handling logic.
+</ResponseField>
+
+### Security
+
+<ResponseField name="hardcoded-credentials" type="error">
+  Detects potential hardcoded API keys, passwords, and secrets in code.
+</ResponseField>
+
+<ResponseField name="no-sql-injection" type="error">
+  Identifies potential SQL injection vulnerabilities from string concatenation in queries.
+</ResponseField>
+
+<ResponseField name="no-unsafe-inner-html" type="error">
+  Finds usage of `innerHTML`, `dangerouslySetInnerHTML`, and similar XSS vectors.
+</ResponseField>
+
+### Performance
+
+<ResponseField name="no-await-in-loop" type="error">
+  Detects `await` inside loops that could be parallelized with `Promise.all()`.
+</ResponseField>
+
+### Possible bugs
+
+<ResponseField name="no-unreachable" type="error">
+  Finds unreachable code after `return`, `throw`, or other control flow statements.
+</ResponseField>
+
+<ResponseField name="use-isnan" type="error">
+  Detects incorrect `NaN` comparisons. Use `Number.isNaN()` instead of `=== NaN`.
+</ResponseField>
+
+### Code quality
+
+<ResponseField name="console-log-debugging" type="warning">
+  Finds debug console statements that shouldn't be in production code.
+</ResponseField>
+
+### AI telltales
+
+<ResponseField name="ai-comment-emojis" type="warning">
+  Detects emojis in comments, a common pattern in AI-generated code.
+</ResponseField>
+
+<ResponseField name="ai-todo-comments" type="warning">
+  Identifies excessive TODO/FIXME comments often left by AI code generators.
+</ResponseField>
+
+### Best practices
+
+<ResponseField name="magic-numbers" type="warning">
+  Finds unnamed numeric constants that should be extracted to named variables.
+</ResponseField>
+
+## Using rule information
+
+After viewing available rules, you can:
+
+1. **Configure rule severity** in `vibrant.config.js`
+2. **Disable specific rules** by setting them to `"off"`
+3. **Customize rule options** for rules that accept configuration
+
+See [rule configuration](/api/config/rule-config) for details.
+
+## See also
+
+- [Rule configuration](/api/config/rule-config)
+- [Configuration file](/api/config/config-file)
+- [Analyze command](/api/commands/analyze)

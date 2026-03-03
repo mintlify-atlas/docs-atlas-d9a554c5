@@ -1,0 +1,200 @@
+---
+title: Security rules
+description: Detect security vulnerabilities like hardcoded credentials, SQL injection, and XSS attacks
+---
+
+Security rules help identify potential vulnerabilities in your codebase before they reach production.
+
+## hardcoded-credentials
+
+**Severity:** Error  
+**Category:** Security
+
+Detects potential secrets hardcoded in source code.
+
+### Why this matters
+
+Hardcoded credentials in source code get committed to version control, creating a security risk. Secrets should always be stored in environment variables or secure configuration systems.
+
+### What it detects
+
+The rule looks for string literals assigned to variables with credential-related names:
+- `password`
+- `apikey` or `api_key`
+- `secret`
+- `token`
+- `privatekey` or `private_key`
+
+### Examples
+
+<Accordion title="Bad: Hardcoded credentials">
+```typescript
+// SECURITY RISK: Credentials in code
+const apiKey = "sk-1234567890abcdef";
+const password = "mySecretPassword123";
+
+const config = {
+  token: "ghp_AbCdEf123456789",
+  privateKey: "-----BEGIN RSA PRIVATE KEY-----"
+};
+```
+</Accordion>
+
+<Accordion title="Good: Use environment variables">
+```typescript
+// Safe: Load from environment
+const apiKey = process.env.API_KEY;
+const password = process.env.DATABASE_PASSWORD;
+
+const config = {
+  token: process.env.GITHUB_TOKEN,
+  privateKey: process.env.PRIVATE_KEY
+};
+```
+</Accordion>
+
+### Safe values
+
+The rule ignores placeholder values:
+- Empty strings
+- `"your-api-key"` or `"YOUR_API_KEY"`
+- `"xxx"`, `"****"`, `"***"`
+- Strings 3 characters or less
+
+### Location
+
+`apps/cli/src/rules/hardcoded-credentials.ts:1`
+
+---
+
+## no-sql-injection
+
+**Severity:** Error  
+**Category:** Security
+
+Detects potential SQL injection vulnerabilities from concatenating user input into SQL queries.
+
+### Why this matters
+
+User input concatenated directly into SQL queries can be exploited by attackers to execute malicious SQL. Always use parameterized queries or prepared statements.
+
+### What it detects
+
+The rule identifies:
+- Template literals containing SQL keywords with variables
+- String concatenation with SQL keywords
+
+### SQL keywords detected
+
+`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `FROM`, `WHERE`
+
+### Examples
+
+<Accordion title="Bad: String concatenation in SQL">
+```typescript
+// DANGEROUS: SQL injection vulnerability
+const query = `SELECT * FROM users WHERE id = ${userId}`;
+
+const deleteQuery = "DELETE FROM posts WHERE id = " + postId;
+
+const updateQuery = `UPDATE users SET email = '${userEmail}' WHERE id = ${id}`;
+```
+</Accordion>
+
+<Accordion title="Good: Parameterized queries">
+```typescript
+// Safe: Use parameterized queries
+const query = db.prepare('SELECT * FROM users WHERE id = ?');
+query.run(userId);
+
+// Safe: ORM with parameter binding
+await db.query(
+  'UPDATE users SET email = $1 WHERE id = $2',
+  [userEmail, id]
+);
+
+// Safe: Query builder
+await knex('users')
+  .where('id', userId)
+  .select('*');
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/no-sql-injection.ts:1`
+
+---
+
+## no-unsafe-inner-html
+
+**Severity:** Error  
+**Category:** Security
+
+Detects potential XSS (Cross-Site Scripting) vulnerabilities from using unsanitized user input in HTML.
+
+### Why this matters
+
+Using unsanitized user input in HTML can lead to XSS attacks where attackers inject malicious scripts into your application.
+
+### What it detects
+
+The rule identifies unsafe HTML manipulation:
+- React's `dangerouslySetInnerHTML`
+- DOM properties: `innerHTML`, `outerHTML`
+- DOM methods: `insertAdjacentHTML`
+
+### Examples
+
+<Accordion title="Bad: Unsafe HTML insertion">
+```typescript
+// DANGEROUS: XSS vulnerability
+function displayComment(comment: string) {
+  element.innerHTML = comment;
+}
+
+// DANGEROUS: React XSS risk
+function Comment({ text }: { text: string }) {
+  return <div dangerouslySetInnerHTML={{ __html: text }} />;
+}
+
+// DANGEROUS: insertAdjacentHTML with user input
+element.insertAdjacentHTML('beforeend', userContent);
+```
+</Accordion>
+
+<Accordion title="Good: Safe alternatives">
+```typescript
+// Safe: Use textContent
+function displayComment(comment: string) {
+  element.textContent = comment;
+}
+
+// Safe: React escapes by default
+function Comment({ text }: { text: string }) {
+  return <div>{text}</div>;
+}
+
+// Safe: Sanitize HTML first
+import DOMPurify from 'dompurify';
+
+function displayHTML(html: string) {
+  const clean = DOMPurify.sanitize(html);
+  element.innerHTML = clean;
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/no-unsafe-inner-html.ts:1`
+
+## Best practices
+
+<Card title="Security checklist" icon="check">
+  - Store all secrets in environment variables
+  - Use parameterized queries for database operations
+  - Sanitize user input before rendering as HTML
+  - Never trust user input
+  - Review security warnings carefully before deploying
+</Card>

@@ -1,80 +1,392 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get up and running with Vibrant in under 5 minutes
 ---
 
-## Get started in three steps
+# Quick start
 
-Get your documentation site running locally and make your first customization.
+This guide will get you analyzing code with Vibrant in under 5 minutes.
 
-### Step 1: Set up your local environment
+## Basic usage
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Run Vibrant on your codebase">
+    The simplest way to use Vibrant is to run it on your current directory:
 
-### Step 2: Deploy your changes
+    ```bash
+    npx vibrant-cli .
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    Or if you installed it globally:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    vibrant .
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    <Tip>
+      Vibrant automatically detects TypeScript and JavaScript files in common source directories like `src/`, `lib/`, `app/`, etc.
+    </Tip>
+  </Step>
 
-### Step 3: Go live
+  <Step title="Review the results">
+    Vibrant will analyze your code and display any issues found:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ```bash
+    🔮 Vibrant Analysis
+    ───────────────────
+
+    ✔ Analysis complete
+
+    ✕ src/api.ts:24:5
+      └─ hardcoded-credentials
+         API key hardcoded in source code
+
+         24|   const API_KEY = "sk-abc123...";
+
+         → Use environment variables instead
+
+    ⚠ src/utils.ts:85:1
+      └─ empty-catch-block
+         Empty catch block swallows errors
+
+         85|   } catch (e) {}
+
+         → Log or handle the error properly
+
+    ✕ 1 error · ⚠ 1 warning · 48 files · 200ms
+    ```
+
+    <Note>
+      - ✕ (red) indicates **errors** - critical issues that should be fixed
+      - ⚠ (yellow) indicates **warnings** - issues that should be reviewed
+    </Note>
+  </Step>
+
+  <Step title="Fix issues automatically (optional)">
+    Some issues can be automatically fixed:
+
+    ```bash
+    vibrant . --fix
+    ```
+
+    This will fix issues like:
+    - Removing `console.log` statements
+    - Adding error handling to empty catch blocks
+    - Other auto-fixable patterns
+
+    ```bash
+    ✓ fixed 5 issues
+    ```
+  </Step>
+</Steps>
+
+## Analyze specific files or directories
+
+You can target specific paths:
+
+<CodeGroup>
+```bash Single file
+vibrant src/api.ts
+```
+
+```bash Specific directory
+vibrant src/components
+```
+
+```bash Glob pattern
+vibrant "src/**/*.ts"
+```
+
+```bash Multiple paths
+vibrant src/api.ts src/utils.ts
+```
+</CodeGroup>
+
+## Ignore files
+
+Exclude certain files or directories from analysis:
+
+```bash
+vibrant . --ignore "dist,coverage,*.test.ts"
+```
+
+Or configure it in `vibrant.config.js`:
+
+```javascript vibrant.config.js
+module.exports = {
+  ignore: ['node_modules', '.git', 'dist', '*.test.ts', 'coverage']
+};
+```
+
+## AI-powered analysis
+
+<Warning>
+  AI analysis requires an API key. See the [Installation](/installation#ai-provider-setup-optional) guide for setup instructions.
+</Warning>
+
+Enable AI-powered deep analysis for more sophisticated pattern detection:
+
+<Steps>
+  <Step title="Set up your API key">
+    Create a `.env` file in your project:
+
+    ```bash .env
+    OPENROUTER_API_KEY="sk-or-v1-..."
+    ```
+
+    <Tip>
+      OpenRouter offers free models and is recommended for getting started. See [Installation](/installation#get-api-keys) for other providers.
+    </Tip>
+  </Step>
+
+  <Step title="Run AI analysis">
+    ```bash
+    vibrant . --ai
+    ```
+
+    You'll see enhanced analysis with:
+    - Overall code health assessment
+    - Key findings and patterns
+    - Actionable recommendations
+  </Step>
+
+  <Step title="Review AI insights">
+    ```bash
+    🔮 Vibrant Analysis
+    ───────────────────
+
+    ✔ Analysis complete
+
+    🔍 Issues Found
+
+    [... issues ...]
+
+    📊 Diagnosis
+
+    The codebase shows signs of AI-generated code with
+    multiple hardcoded credentials and incomplete error
+    handling patterns.
+
+    ⚡ Key Findings
+
+    • 3 hardcoded API keys need to be moved to environment variables
+    • 5 empty catch blocks silently swallow errors
+    • 12 console.log statements should be removed
+
+    💡 Recommendations
+
+    → Move all credentials to environment variables using dotenv
+    → Add proper error logging in catch blocks
+    → Remove debug console.log statements before production
+
+    ✕ 8 errors · ⚠ 12 warnings · 48 files · 10.2s
+    ```
+  </Step>
+</Steps>
+
+### Choose a specific AI provider
+
+Use a different AI provider:
+
+<CodeGroup>
+```bash OpenRouter (free)
+vibrant . --ai --provider openrouter
+```
+
+```bash Gemini (free tier)
+vibrant . --ai --provider gemini
+```
+
+```bash OpenAI
+vibrant . --ai --provider openai
+```
+
+```bash Claude
+vibrant . --ai --provider claude
+```
+
+```bash Ollama (local)
+vibrant . --ai --provider ollama
+```
+</CodeGroup>
+
+## Output formats
+
+Vibrant supports different output formats for different use cases:
+
+<Tabs>
+  <Tab title="Pretty (default)">
+    Human-readable output with colors:
+
+    ```bash
+    vibrant .
+    ```
+
+    Best for: Interactive terminal usage
+  </Tab>
+
+  <Tab title="Compact">
+    Single-line output for each issue:
+
+    ```bash
+    vibrant . --format compact
+    ```
+
+    Output:
+    ```
+    src/api.ts:24:5 error hardcoded-credentials API key in source
+    src/utils.ts:85:1 warning empty-catch-block Swallows errors
+    ```
+
+    Best for: CI/CD pipelines, grep-able output
+  </Tab>
+
+  <Tab title="JSON">
+    Machine-readable JSON output:
+
+    ```bash
+    vibrant . --format json > report.json
+    ```
+
+    Best for: Tooling integration, custom reporting
+  </Tab>
+
+  <Tab title="Plan">
+    Detailed markdown report:
+
+    ```bash
+    vibrant . --format plan
+    ```
+
+    Creates `vibrant-report.md` with:
+    - Complete issue list with code snippets
+    - Suggested fixes for each issue
+    - Priority ordering (errors first)
+
+    Best for: AI assistants to auto-fix issues, documentation
+  </Tab>
+</Tabs>
+
+## Common commands
+
+### List all detection rules
+
+See all available rules Vibrant can detect:
+
+```bash
+vibrant rules
+```
+
+Output:
+```
+📋 Available Detection Rules
+
+Security
+──────────────────────────────────────────────────────
+hardcoded-credentials    Hardcoded API keys, passwords
+no-sql-injection        SQL injection vulnerabilities
+no-unsafe-inner-html    XSS via innerHTML
+
+Bugs
+──────────────────────────────────────────────────────
+empty-catch-block        Empty catch blocks
+unimplemented-error     Unimplemented code
+empty-function-body     Empty functions
+[...]
+```
+
+### View help
+
+Get help on available commands and options:
+
+```bash
+vibrant --help
+```
+
+### Check version
+
+Display the installed version:
+
+```bash
+vibrant --version
+```
+
+## Ignoring false positives
+
+Sometimes you need to ignore specific lines:
+
+<CodeGroup>
+```typescript Ignore current line
+// vibrant ignore
+const debug = true;
+```
+
+```typescript Ignore next line
+// vibrant ignore-next-line
+const apiKey = process.env.API_KEY || "default-key";
+```
+
+```typescript Inline ignore
+const temp = "test"; // vibrant ignore
+```
+</CodeGroup>
+
+## CI/CD integration
+
+Integrate Vibrant into your continuous integration pipeline:
+
+<CodeGroup>
+```yaml GitHub Actions
+name: Code Quality
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Vibrant
+        run: npx vibrant-cli . --format compact
+```
+
+```yaml GitLab CI
+code-quality:
+  image: node:20
+  script:
+    - npx vibrant-cli . --format compact
+  only:
+    - merge_requests
+    - main
+```
+</CodeGroup>
+
+<Note>
+  Vibrant exits with code `1` if errors are found, and `0` if no issues or only warnings. This integrates naturally with CI/CD systems.
+</Note>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="CLI reference" icon="terminal" href="/usage/commands">
+    Complete reference for all commands and options
+  </Card>
+  
+  <Card title="Detection rules" icon="list" href="/rules/overview">
+    Learn about all the patterns Vibrant can detect
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/usage/configuration">
+    Customize Vibrant for your project
+  </Card>
+  
+  <Card title="AI providers" icon="brain" href="/ai-providers/overview">
+    Deep dive into AI-powered analysis
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

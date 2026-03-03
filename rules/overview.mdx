@@ -1,0 +1,76 @@
+---
+title: Rules overview
+description: Understand the Vibrant CLI rules system and rule categories
+---
+
+Vibrant CLI uses a comprehensive set of rules to detect bugs, security vulnerabilities, code quality issues, and AI-generated code patterns in your TypeScript codebase.
+
+## How rules work
+
+The rules system analyzes your code's Abstract Syntax Tree (AST) to identify potential issues. Each rule:
+
+- Has a unique ID for configuration
+- Detects specific patterns or anti-patterns
+- Provides clear explanations of why the pattern is problematic
+- Suggests fixes when possible
+- Has a severity level (error or warning)
+
+## Rule categories
+
+<CardGroup cols={2}>
+  <Card title="Security" icon="shield" href="/rules/security">
+    Detects hardcoded credentials, SQL injection, and XSS vulnerabilities
+  </Card>
+  
+  <Card title="Bug detection" icon="bug" href="/rules/bugs">
+    Catches empty catch blocks, unreachable code, and common JavaScript gotchas
+  </Card>
+  
+  <Card title="Code quality" icon="sparkles" href="/rules/code-quality">
+    Identifies debug statements, type safety issues, and performance problems
+  </Card>
+  
+  <Card title="AI telltales" icon="robot" href="/rules/ai-telltales">
+    Spots patterns common in AI-generated code like emoji comments and magic numbers
+  </Card>
+</CardGroup>
+
+## Rule severity levels
+
+### Errors
+
+Errors indicate serious problems that should be fixed:
+- Runtime crashes
+- Security vulnerabilities
+- Type safety violations
+- Performance issues
+
+### Warnings
+
+Warnings suggest improvements but won't break your application:
+- Debug code left in production
+- Code style issues
+- Maintenance concerns
+
+## Configuring rules
+
+You can configure which rules to enable in your `vibrant.config.json`:
+
+```json
+{
+  "rules": {
+    "hardcoded-credentials": "error",
+    "console-log-debugging": "warning",
+    "ai-comment-emojis": "off"
+  }
+}
+```
+
+## Next steps
+
+Explore each category to learn about specific rules:
+
+- [Security rules](/rules/security) - Protect against vulnerabilities
+- [Bug detection rules](/rules/bugs) - Prevent runtime errors
+- [Code quality rules](/rules/code-quality) - Improve maintainability
+- [AI telltales rules](/rules/ai-telltales) - Identify AI-generated patterns

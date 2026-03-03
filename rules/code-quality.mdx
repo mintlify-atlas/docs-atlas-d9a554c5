@@ -1,0 +1,287 @@
+---
+title: Code quality rules
+description: Identify debug statements, type safety issues, and performance problems
+---
+
+Code quality rules help maintain clean, performant, and type-safe code.
+
+## console-log-debugging
+
+**Severity:** Warning  
+**Category:** Code Quality  
+**Fixable:** Yes
+
+Detects debug console statements that should not be in production code.
+
+### Why this matters
+
+Debug console statements are common in AI-generated code and development workflows but should be removed before production. They clutter logs and may expose sensitive information.
+
+### What it detects
+
+The rule identifies debug patterns in console calls:
+- `console.log("here")`, `console.log("test")`, `console.log("debug")`
+- `console.log("wtf")`, `console.log("???")`
+- `console.log("===")`, `console.log("---")`
+- `console.log("1")`, `console.log("2")` (number strings)
+- `console.log()`, `console.dir()`, `console.table()` with objects
+- Single variable logging: `console.log(someVar)`
+
+### Examples
+
+<Accordion title="Bad: Debug console statements">
+```typescript
+// BAD: Debug statements
+function processOrder(order: Order) {
+  console.log('here');
+  
+  const total = calculateTotal(order);
+  console.log(total); // Debug logging
+  
+  console.log('===');
+  console.dir(order);
+  
+  return total;
+}
+
+function validateData(data: unknown) {
+  console.log('wtf', data);
+  console.log('1');
+  // ...
+}
+```
+</Accordion>
+
+<Accordion title="Good: Use proper logging">
+```typescript
+// Good: Use a proper logger
+import { logger } from './logger';
+
+function processOrder(order: Order) {
+  logger.info('Processing order', { orderId: order.id });
+  
+  const total = calculateTotal(order);
+  logger.debug('Order total calculated', { total });
+  
+  return total;
+}
+
+// Good: Remove debug statements entirely
+function validateData(data: unknown) {
+  // Clean implementation without debug logs
+  return schema.parse(data);
+}
+```
+</Accordion>
+
+### Auto-fix
+
+This rule can automatically remove debug console statements when using the `--fix` flag.
+
+### Location
+
+`apps/cli/src/rules/console-log-debugging.ts:1`
+
+---
+
+## no-explicit-any
+
+**Severity:** Error  
+**Category:** Type Safety  
+**Fixable:** Yes
+
+Disallows the use of the `any` type in TypeScript.
+
+### Why this matters
+
+Using `any` defeats TypeScript's type safety by disabling compile-time verification. This can lead to runtime errors that could have been caught during development.
+
+### What it detects
+
+The rule flags all uses of the `any` type in:
+- Variable declarations
+- Function parameters
+- Function return types
+- Type aliases
+- Property declarations
+
+### Examples
+
+<Accordion title="Bad: Using any">
+```typescript
+// BAD: Disables type checking
+function processData(data: any) {
+  return data.someMethod(); // No type safety
+}
+
+// BAD: Any type variable
+let response: any;
+response = fetchData();
+
+// BAD: Any in type alias
+type Config = {
+  settings: any;
+};
+```
+</Accordion>
+
+<Accordion title="Good: Use proper types">
+```typescript
+// Good: Use unknown for truly unknown types
+function processData(data: unknown) {
+  if (typeof data === 'object' && data !== null) {
+    // Type narrowing required
+    return (data as any).someMethod();
+  }
+}
+
+// Good: Define proper types
+interface ApiResponse {
+  data: string;
+  status: number;
+}
+
+let response: ApiResponse;
+response = await fetchData();
+
+// Good: Specific types
+type Config = {
+  settings: Record<string, string>;
+};
+
+// Good: Use generic types
+function getValue<T>(key: string): T | undefined {
+  return storage.get(key) as T | undefined;
+}
+```
+</Accordion>
+
+### Auto-fix
+
+This rule can automatically replace `any` with `unknown` when using the `--fix` flag. You'll still need to add proper type narrowing.
+
+### Location
+
+`apps/cli/src/rules/no-explicit-any.ts:1`
+
+---
+
+## no-await-in-loop
+
+**Severity:** Error  
+**Category:** Performance
+
+Detects `await` expressions inside loops that cause sequential execution.
+
+### Why this matters
+
+Using `await` inside a loop causes operations to run sequentially instead of in parallel, significantly impacting performance. Use `Promise.all()` to run promises concurrently.
+
+### What it detects
+
+The rule identifies `await` in:
+- `for` loops
+- `for...of` loops
+- `for...in` loops
+- `while` loops
+- `do...while` loops
+
+### Examples
+
+<Accordion title="Bad: Sequential await in loop">
+```typescript
+// BAD: Sequential execution (slow)
+async function fetchUsers(ids: string[]) {
+  const users = [];
+  for (const id of ids) {
+    const user = await fetchUser(id); // Waits for each
+    users.push(user);
+  }
+  return users;
+}
+
+// BAD: Each request waits for previous
+async function processItems(items: Item[]) {
+  for (let i = 0; i < items.length; i++) {
+    await processItem(items[i]);
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Good: Parallel execution">
+```typescript
+// Good: Parallel execution (fast)
+async function fetchUsers(ids: string[]) {
+  return Promise.all(
+    ids.map(id => fetchUser(id))
+  );
+}
+
+// Good: Process all items concurrently
+async function processItems(items: Item[]) {
+  await Promise.all(
+    items.map(item => processItem(item))
+  );
+}
+
+// Good: Use Promise.allSettled for error handling
+async function processWithErrors(items: Item[]) {
+  const results = await Promise.allSettled(
+    items.map(item => processItem(item))
+  );
+  
+  const successful = results.filter(r => r.status === 'fulfilled');
+  const failed = results.filter(r => r.status === 'rejected');
+  
+  return { successful, failed };
+}
+```
+</Accordion>
+
+### When sequential is needed
+
+Sometimes you actually need sequential execution (e.g., rate limiting):
+
+```typescript
+// Legitimate use case: rate limiting
+async function processWithRateLimit(items: Item[]) {
+  for (const item of items) {
+    await processItem(item);
+    await delay(100); // Rate limit: 10 req/sec
+  }
+}
+
+// Use p-limit library for controlled concurrency
+import pLimit from 'p-limit';
+
+const limit = pLimit(3); // Max 3 concurrent
+
+async function processWithLimit(items: Item[]) {
+  await Promise.all(
+    items.map(item => limit(() => processItem(item)))
+  );
+}
+```
+
+### Performance impact
+
+For 10 requests taking 100ms each:
+- **Sequential** (await in loop): 1000ms total
+- **Parallel** (Promise.all): 100ms total
+
+10x performance improvement!
+
+### Location
+
+`apps/cli/src/rules/no-await-in-loop.ts:1`
+
+## Best practices
+
+<Card title="Code quality checklist" icon="check">
+  - Use proper logging libraries instead of console.log
+  - Avoid `any` type - use `unknown` or specific types
+  - Run async operations in parallel with Promise.all()
+  - Enable strict TypeScript compiler options
+  - Remove debug code before committing
+</Card>

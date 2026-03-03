@@ -1,0 +1,308 @@
+---
+title: Configuration
+description: Configuration file guide for Vibrant CLI
+---
+
+Vibrant can be configured using a `vibrant.config.js` file in your project root.
+
+## Creating a config file
+
+Run the init command to create a default configuration:
+
+```bash
+vibrant init
+```
+
+This generates a `vibrant.config.js` file with sensible defaults:
+
+```javascript vibrant.config.js
+module.exports = {
+  // Directories to ignore during analysis
+  ignore: ['node_modules', '.git', 'dist', '.next', 'build', 'coverage'],
+  
+  // Output format: 'pretty', 'compact' or 'plan'
+  format: 'pretty',
+  
+  // AI Provider configuration (optional)
+  // provider: 'openrouter', // 'openai' | 'claude' | 'gemini' | 'ollama' | 'openrouter'
+};
+```
+
+## Configuration options
+
+### ignore
+
+Directories and file patterns to exclude from analysis.
+
+<ParamField path="ignore" type="string[]">
+  Array of glob patterns to ignore.
+  
+  **Default:**
+  ```javascript
+  [
+    '**/node_modules/**',
+    '**/.git/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/.next/**',
+    '**/.turbo/**',
+    '**/coverage/**',
+    '**/*.d.ts',
+    '**/test/**',
+    '**/tests/**',
+    '**/__tests__/**'
+  ]
+  ```
+</ParamField>
+
+**Example:**
+
+```javascript vibrant.config.js
+module.exports = {
+  ignore: [
+    'node_modules',
+    'dist',
+    'build',
+    '*.config.js',
+    'test/**'
+  ]
+};
+```
+
+### format
+
+Default output format for analysis results.
+
+<ParamField path="format" type="string">
+  Output format type.
+  
+  **Values:** `'pretty'` | `'compact'` | `'plan'` | `'json'`
+  
+  **Default:** `'pretty'`
+</ParamField>
+
+**Example:**
+
+```javascript vibrant.config.js
+module.exports = {
+  format: 'compact'
+};
+```
+
+See [Output Formats](/usage/output-formats) for examples of each format.
+
+### provider
+
+AI provider for enhanced analysis.
+
+<ParamField path="provider" type="string">
+  AI provider name.
+  
+  **Values:** `'openai'` | `'claude'` | `'gemini'` | `'ollama'` | `'openrouter'`
+  
+  **Default:** Auto-detected from environment variables
+</ParamField>
+
+**Example:**
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'openrouter'
+};
+```
+
+### rules
+
+Customize which rules to enable and their severity levels.
+
+<ParamField path="rules" type="object">
+  Rule configuration object.
+  
+  Each rule can be set to:
+  - `'error'` - Fail the analysis
+  - `'warn'` - Show warning but don't fail
+  - `'off'` - Disable the rule
+</ParamField>
+
+**Default rules:**
+
+```javascript
+{
+  // Type safety
+  'no-explicit-any': 'error',
+  
+  // Incomplete code
+  'unimplemented-error': 'error',
+  'empty-function-body': 'error',
+  
+  // Error handling
+  'empty-catch-block': 'error',
+  
+  // Security
+  'hardcoded-credentials': 'error',
+  
+  // Debug code
+  'console-log-debugging': 'warn'
+}
+```
+
+**Example:**
+
+```javascript vibrant.config.js
+module.exports = {
+  rules: {
+    'no-explicit-any': 'warn',  // Downgrade to warning
+    'console-log-debugging': 'off',  // Disable
+    'empty-function-body': 'error'  // Keep as error
+  }
+};
+```
+
+### languageOptions
+
+Configure ECMAScript version and module type.
+
+<ParamField path="languageOptions" type="object">
+  Language parsing options.
+  
+  **Default:**
+  ```javascript
+  {
+    ecmaVersion: 2022,
+    sourceType: 'module'
+  }
+  ```
+</ParamField>
+
+**Example:**
+
+```javascript vibrant.config.js
+module.exports = {
+  languageOptions: {
+    ecmaVersion: 2023,
+    sourceType: 'module'
+  }
+};
+```
+
+## File discovery
+
+Vibrant searches for configuration files in the following order:
+
+1. `vibrant.config.js`
+2. `vibrant.config.mjs`
+3. `vibrant.config.cjs`
+4. `vibrant.config.ts`
+5. `.vibrantrc`
+6. `.vibrantrc.js`
+7. `.vibrantrc.mjs`
+8. `.vibrantrc.cjs`
+9. `.vibrantrc.ts`
+10. `.vibrantrc.json`
+
+The search starts in the current directory and walks up to parent directories until a config file is found.
+
+## TypeScript config
+
+You can use TypeScript for configuration:
+
+```typescript vibrant.config.ts
+import type { Config } from 'vibrant';
+
+const config: Config = {
+  ignore: ['node_modules', 'dist'],
+  format: 'pretty',
+  rules: {
+    'no-explicit-any': 'error',
+    'console-log-debugging': 'warn'
+  }
+};
+
+export default config;
+```
+
+<Note>
+TypeScript configs require Bun to be installed for compilation.
+</Note>
+
+## JSON config
+
+Simple JSON configuration is also supported:
+
+```json .vibrantrc.json
+{
+  "ignore": ["node_modules", "dist"],
+  "format": "pretty",
+  "rules": {
+    "no-explicit-any": "error",
+    "console-log-debugging": "warn"
+  }
+}
+```
+
+## Full configuration example
+
+```javascript vibrant.config.js
+module.exports = {
+  // Files to analyze (optional - uses defaults if not specified)
+  files: [
+    'src/**/*',
+    'lib/**/*',
+    'app/**/*'
+  ],
+  
+  // Patterns to ignore
+  ignore: [
+    'node_modules',
+    '.git',
+    'dist',
+    'build',
+    '.next',
+    'coverage',
+    '*.d.ts',
+    'test/**',
+    '*.test.ts',
+    '*.config.js'
+  ],
+  
+  // Output format
+  format: 'pretty',
+  
+  // AI provider
+  provider: 'openrouter',
+  
+  // Rule configuration
+  rules: {
+    // Type safety
+    'no-explicit-any': 'error',
+    
+    // Incomplete code
+    'unimplemented-error': 'error',
+    'empty-function-body': 'error',
+    
+    // Error handling
+    'empty-catch-block': 'error',
+    
+    // Security
+    'hardcoded-credentials': 'error',
+    'no-sql-injection': 'error',
+    'no-unsafe-inner-html': 'error',
+    
+    // Performance
+    'no-await-in-loop': 'error',
+    
+    // Possible bugs
+    'no-unreachable': 'error',
+    'use-isnan': 'error',
+    
+    // Debug code
+    'console-log-debugging': 'warn'
+  },
+  
+  // Language options
+  languageOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module'
+  }
+};
+```

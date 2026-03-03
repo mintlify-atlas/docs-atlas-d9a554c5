@@ -1,0 +1,165 @@
+---
+title: Options
+description: Command-line options reference for Vibrant CLI
+---
+
+Vibrant supports multiple command-line options to customize analysis behavior.
+
+## Analysis options
+
+<ParamField path="--format" type="string">
+  Output format for analysis results.
+  
+  **Values:** `pretty`, `compact`, `plan`, `json`
+  
+  **Default:** `pretty`
+  
+  ```bash
+  vibrant . --format compact
+  vibrant . --format json
+  ```
+  
+  See [Output Formats](/usage/output-formats) for examples of each format.
+</ParamField>
+
+<ParamField path="--ignore" type="string">
+  Comma-separated patterns to ignore during analysis.
+  
+  **Default:** `""` (empty)
+  
+  ```bash
+  vibrant . --ignore "test/**,*.spec.ts"
+  vibrant . --ignore "node_modules,dist,build"
+  ```
+  
+  Patterns are combined with ignore patterns from `vibrant.config.js`.
+</ParamField>
+
+<ParamField path="--fix" type="boolean">
+  Automatically fix problems where possible.
+  
+  **Default:** `false`
+  
+  ```bash
+  vibrant . --fix
+  ```
+  
+  Only applies fixes for rules that support auto-fixing. After fixing, Vibrant displays the number of issues fixed.
+</ParamField>
+
+## AI options
+
+<ParamField path="--ai" type="boolean">
+  Enable AI-powered analysis for deeper code inspection.
+  
+  **Default:** `false`
+  
+  ```bash
+  vibrant . --ai
+  vibrant . --ai --provider openrouter
+  ```
+  
+  Requires an AI provider to be configured via environment variables or the `--provider` flag.
+</ParamField>
+
+<ParamField path="--provider" type="string">
+  AI provider to use for analysis.
+  
+  **Values:** `openai`, `claude`, `gemini`, `ollama`, `openrouter`
+  
+  **Default:** Auto-detected from environment variables
+  
+  ```bash
+  vibrant . --ai --provider openrouter
+  vibrant . --ai --provider ollama
+  ```
+  
+  Each provider requires specific environment variables:
+  
+  - **openrouter:** `OPENROUTER_API_KEY`
+  - **openai:** `OPENAI_API_KEY`
+  - **gemini:** `GOOGLE_GENERATIVE_AI_API_KEY`
+  - **claude:** `ANTHROPIC_API_KEY`
+  - **ollama:** No API key required (runs locally)
+</ParamField>
+
+<ParamField path="--no-cache" type="boolean">
+  Disable analysis cache for AI-powered analysis.
+  
+  **Default:** `false` (cache enabled)
+  
+  ```bash
+  vibrant . --ai --no-cache
+  ```
+  
+  By default, Vibrant caches AI analysis results to improve performance on subsequent runs. Use this flag to force fresh analysis.
+</ParamField>
+
+## Global options
+
+<ParamField path="--version" type="flag">
+  Display version number.
+  
+  ```bash
+  vibrant --version
+  vibrant -V
+  ```
+</ParamField>
+
+<ParamField path="--help" type="flag">
+  Display help for command.
+  
+  ```bash
+  vibrant --help
+  vibrant -h
+  ```
+</ParamField>
+
+## Environment variables
+
+Vibrant automatically loads environment variables from `.env` files in the following order:
+
+1. `.env`
+2. `.env.local`
+3. `.env.development`
+4. `.env.production`
+
+The first file found is loaded. This is useful for configuring AI providers without passing API keys via command line.
+
+### AI provider keys
+
+```bash .env
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENAI_API_KEY=sk-...
+GOOGLE_GENERATIVE_AI_API_KEY=...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Option precedence
+
+When the same option is specified in multiple places, Vibrant uses this precedence (highest to lowest):
+
+1. Command-line flags
+2. Configuration file (`vibrant.config.js`)
+3. Default values
+
+### Example
+
+```javascript vibrant.config.js
+module.exports = {
+  format: 'compact',
+  ignore: ['node_modules', 'dist']
+};
+```
+
+```bash
+# Uses format 'json' (CLI overrides config)
+vibrant . --format json
+
+# Uses format 'compact' (from config)
+vibrant .
+
+# Combines ignore patterns from both CLI and config
+vibrant . --ignore "test/**"
+# Result: ['node_modules', 'dist', 'test/**']
+```

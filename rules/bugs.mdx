@@ -1,0 +1,361 @@
+---
+title: Bug detection rules
+description: Catch common bugs like empty catch blocks, unreachable code, and JavaScript gotchas
+---
+
+Bug detection rules identify patterns that cause runtime errors or unexpected behavior.
+
+## empty-catch-block
+
+**Severity:** Error  
+**Category:** Best Practices
+
+Disallows empty catch blocks that silently swallow errors.
+
+### Why this matters
+
+Empty catch blocks make debugging nearly impossible because exceptions are caught but never handled. Errors disappear silently, hiding critical issues in your application.
+
+### What it detects
+
+- Completely empty catch blocks
+- Catch blocks that only contain `console.log()`
+
+### Examples
+
+<Accordion title="Bad: Empty catch blocks">
+```typescript
+// DANGEROUS: Error is silently swallowed
+try {
+  await riskyOperation();
+} catch (error) {
+  // Empty - error disappears
+}
+
+// DANGEROUS: Only logs, doesn't handle
+try {
+  processData(data);
+} catch (error) {
+  console.log(error);
+}
+```
+</Accordion>
+
+<Accordion title="Good: Proper error handling">
+```typescript
+// Good: Handle the error appropriately
+try {
+  await riskyOperation();
+} catch (error) {
+  logger.error('Operation failed:', error);
+  throw new AppError('Failed to complete operation', error);
+}
+
+// Good: Provide fallback behavior
+try {
+  const data = await fetchData();
+  return processData(data);
+} catch (error) {
+  logger.warn('Using cached data due to error:', error);
+  return getCachedData();
+}
+
+// Good: Rethrow if you can't handle it
+try {
+  await operation();
+} catch (error) {
+  logger.error('Operation failed:', error);
+  throw error;
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/empty-catch-block.ts:1`
+
+---
+
+## empty-function-body
+
+**Severity:** Error  
+**Category:** Best Practices
+
+Detects functions with no implementation.
+
+### Why this matters
+
+Empty functions return `undefined` unexpectedly and are often incomplete stubs left by AI code generation. They should be implemented or removed.
+
+### What it detects
+
+- Functions with completely empty bodies
+- Functions with only an empty `return` statement
+- Excludes abstract methods
+
+### Examples
+
+<Accordion title="Bad: Empty function bodies">
+```typescript
+// BAD: Empty function
+function processData(data: string) {
+  // No implementation
+}
+
+// BAD: Empty return
+function calculateTotal(items: Item[]) {
+  return;
+}
+
+// BAD: Arrow function with no body
+const handler = () => {};
+```
+</Accordion>
+
+<Accordion title="Good: Implemented functions">
+```typescript
+// Good: Complete implementation
+function processData(data: string) {
+  return data.trim().toLowerCase();
+}
+
+// Good: Return calculated value
+function calculateTotal(items: Item[]): number {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+
+// Good: Abstract method (interface)
+abstract class BaseService {
+  abstract process(data: string): void;
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/empty-function-body.ts:1`
+
+---
+
+## unimplemented-error
+
+**Severity:** Error  
+**Category:** Best Practices
+
+Detects placeholder error throws indicating incomplete functionality.
+
+### Why this matters
+
+Code that throws "not implemented" errors will crash at runtime. These are often AI-generated stubs that were never completed.
+
+### Patterns detected
+
+- `not implemented`
+- `todo`
+- `coming soon`
+- `implement this`
+- `placeholder`
+
+### Examples
+
+<Accordion title="Bad: Placeholder errors">
+```typescript
+// BAD: Will crash when called
+function processPayment(amount: number) {
+  throw new Error('Not implemented');
+}
+
+function validateUser(user: User) {
+  throw new Error('TODO: implement validation');
+}
+
+class UserService {
+  async createUser(data: UserData) {
+    throw new Error('Coming soon');
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Good: Complete implementations">
+```typescript
+// Good: Actually implemented
+function processPayment(amount: number) {
+  return stripe.charges.create({ amount });
+}
+
+// Good: Real validation
+function validateUser(user: User) {
+  if (!user.email) {
+    throw new Error('Email is required');
+  }
+  return true;
+}
+
+// Good: Graceful degradation if not ready
+function experimentalFeature() {
+  logger.warn('Feature not available yet');
+  return null; // Returns safely instead of crashing
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/unimplemented-error.ts:1`
+
+---
+
+## no-unreachable
+
+**Severity:** Error  
+**Category:** Possible Bugs
+
+Detects code that can never execute after return, throw, break, or continue statements.
+
+### Why this matters
+
+Unreachable code is dead code that will never run, indicating a logic error or unnecessary code.
+
+### Examples
+
+<Accordion title="Bad: Unreachable code">
+```typescript
+// BAD: Code after return
+function getUser(id: string) {
+  return database.findUser(id);
+  console.log('This never runs'); // Unreachable
+}
+
+// BAD: Code after throw
+function validateAge(age: number) {
+  if (age < 0) {
+    throw new Error('Invalid age');
+    return false; // Unreachable
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Good: All code is reachable">
+```typescript
+// Good: Return at the end
+function getUser(id: string) {
+  console.log('Fetching user:', id);
+  return database.findUser(id);
+}
+
+// Good: Proper flow
+function validateAge(age: number) {
+  if (age < 0) {
+    throw new Error('Invalid age');
+  }
+  return true;
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/no-unreachable.ts:1`
+
+---
+
+## no-ex-assign
+
+**Severity:** Error  
+**Category:** Possible Bugs
+
+Detects reassignment of the error variable in catch clauses.
+
+### Why this matters
+
+Reassigning the error variable in a catch block can lose the original error reference, making debugging difficult.
+
+### Examples
+
+<Accordion title="Bad: Reassigning error variable">
+```typescript
+// BAD: Loses original error
+try {
+  await operation();
+} catch (error) {
+  error = new Error('Something went wrong');
+  throw error; // Original error is lost
+}
+```
+</Accordion>
+
+<Accordion title="Good: Create new error variable">
+```typescript
+// Good: Keep original error
+try {
+  await operation();
+} catch (originalError) {
+  const wrappedError = new Error('Something went wrong');
+  wrappedError.cause = originalError;
+  throw wrappedError;
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/no-ex-assign.ts:1`
+
+---
+
+## use-isnan
+
+**Severity:** Error  
+**Category:** Possible Bugs
+
+Detects unsafe comparisons with `NaN` using `===` or `!==`.
+
+### Why this matters
+
+In JavaScript, `NaN === NaN` returns `false`, so direct comparison never works as expected. Use `Number.isNaN()` instead.
+
+### Examples
+
+<Accordion title="Bad: Direct NaN comparison">
+```typescript
+// BAD: Always returns false
+if (value === NaN) {
+  console.log('Is NaN');
+}
+
+// BAD: Doesn't work
+if (result !== NaN) {
+  processResult(result);
+}
+```
+</Accordion>
+
+<Accordion title="Good: Use Number.isNaN()">
+```typescript
+// Good: Correct NaN check
+if (Number.isNaN(value)) {
+  console.log('Is NaN');
+}
+
+// Good: Check if not NaN
+if (!Number.isNaN(result)) {
+  processResult(result);
+}
+```
+</Accordion>
+
+### Location
+
+`apps/cli/src/rules/use-isnan.ts:1`
+
+## Summary
+
+These bug detection rules help catch common errors before they cause runtime issues:
+
+- Handle errors properly instead of swallowing them
+- Implement all functions or remove unused ones
+- Complete placeholder code before production
+- Remove unreachable dead code
+- Use `Number.isNaN()` for NaN checks

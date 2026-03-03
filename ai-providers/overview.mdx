@@ -1,0 +1,151 @@
+---
+title: AI providers overview
+description: Choose the right AI provider for deep code analysis in Vibrant CLI
+---
+
+Vibrant CLI supports multiple AI providers for deep code analysis that goes beyond static analysis. AI providers help detect complex patterns, provide context-aware suggestions, and generate detailed summaries of your codebase.
+
+## Why use AI analysis?
+
+While static analysis is fast and catches many common issues, AI-powered analysis can:
+
+- Detect complex anti-patterns that require context understanding
+- Provide natural language explanations of issues
+- Generate actionable recommendations for code improvements
+- Understand business logic and suggest better implementations
+- Identify architectural issues across multiple files
+
+## Enable AI analysis
+
+Add the `--ai` flag to any Vibrant command:
+
+```bash
+vibrant . --ai
+```
+
+Vibrant will automatically detect which provider to use based on available API keys in your environment.
+
+## Available providers
+
+<CardGroup cols={2}>
+  <Card title="OpenRouter" icon="router" href="/ai-providers/openrouter">
+    Free models available. Best for getting started without costs.
+  </Card>
+  
+  <Card title="Google Gemini" icon="gem" href="/ai-providers/gemini">
+    Generous free tier. Fast and accurate for code analysis.
+  </Card>
+  
+  <Card title="OpenAI" icon="openai" href="/ai-providers/openai">
+    Industry-leading models. Paid service with excellent quality.
+  </Card>
+  
+  <Card title="Claude" icon="message-bot" href="/ai-providers/claude">
+    Anthropic's AI. Great for complex reasoning. Paid service.
+  </Card>
+  
+  <Card title="Ollama" icon="server" href="/ai-providers/ollama">
+    Run models locally. Completely free and private.
+  </Card>
+</CardGroup>
+
+## Provider comparison
+
+| Provider | Cost | Speed | Quality | Best for |
+|----------|------|-------|---------|----------|
+| **OpenRouter** | Free tier | Fast | Good | Getting started, trying different models |
+| **Gemini** | Free tier | Very fast | Excellent | Daily development, CI/CD |
+| **OpenAI** | Paid | Fast | Excellent | Production use, critical analysis |
+| **Claude** | Paid | Medium | Excellent | Complex codebases, deep reasoning |
+| **Ollama** | Free | Medium | Good | Privacy-sensitive projects, offline use |
+
+## Choose a provider
+
+### Free options (recommended for getting started)
+
+<Steps>
+  <Step title="OpenRouter">
+    Get instant access to multiple free models. [Setup guide](/ai-providers/openrouter)
+  </Step>
+  
+  <Step title="Gemini">
+    Google's generous free tier with fast performance. [Setup guide](/ai-providers/gemini)
+  </Step>
+  
+  <Step title="Ollama">
+    Run models locally on your machine. [Setup guide](/ai-providers/ollama)
+  </Step>
+</Steps>
+
+### Paid options (for production use)
+
+<Steps>
+  <Step title="OpenAI">
+    Industry standard with excellent quality. [Setup guide](/ai-providers/openai)
+  </Step>
+  
+  <Step title="Claude">
+    Great for complex analysis and reasoning. [Setup guide](/ai-providers/claude)
+  </Step>
+</Steps>
+
+## Specify a provider
+
+Use the `--provider` flag to choose a specific provider:
+
+```bash
+vibrant . --ai --provider openrouter
+vibrant . --ai --provider gemini
+vibrant . --ai --provider openai
+vibrant . --ai --provider claude
+vibrant . --ai --provider ollama
+```
+
+<Note>
+If you don't specify a provider, Vibrant will automatically detect and use the first available provider based on your environment variables.
+</Note>
+
+## Configuration
+
+You can set a default provider in your `vibrant.config.js`:
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'openrouter',
+};
+```
+
+Now you can run `vibrant . --ai` without specifying `--provider` each time.
+
+## Token optimization
+
+Vibrant includes a Smart Summarizer that reduces token usage by 50-60% while maintaining detection accuracy:
+
+```bash
+vibrant . --ai
+```
+
+```
+📊 Token Optimization:
+   Original: 45,000 tokens
+   Summarized: 18,000 tokens
+   Savings: 60.0%
+```
+
+This means:
+- Lower API costs for paid providers
+- Faster analysis times
+- More files can be analyzed in a single request
+- Better free tier utilization
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Set up OpenRouter" icon="rocket" href="/ai-providers/openrouter">
+    Get started with free models in minutes
+  </Card>
+  
+  <Card title="Compare providers" icon="chart-line">
+    See detailed pricing and model information for each provider
+  </Card>
+</CardGroup>

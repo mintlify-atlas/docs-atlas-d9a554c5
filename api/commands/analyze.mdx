@@ -1,0 +1,163 @@
+---
+title: analyze
+description: Detect AI-generated code patterns in your codebase
+---
+
+The `vibrant` command analyzes your codebase to detect patterns commonly found in AI-generated code, including incomplete implementations, security issues, and code quality problems.
+
+## Syntax
+
+```bash
+vibrant [path] [options]
+```
+
+## Parameters
+
+<ParamField path="path" type="string" default=".">
+  Path to analyze (file or directory). Defaults to current directory.
+</ParamField>
+
+## Options
+
+<ParamField query="format" type="string">
+  Output format for displaying results.
+  
+  **Values:**
+  - `pretty` - Colorful, detailed output with syntax highlighting
+  - `compact` - Minimal output showing only essential information
+  - `plan` - Markdown report saved to `vibrant-report.md`
+  - `json` - Machine-readable JSON format
+  
+  **Default:** Configured in `vibrant.config.js` (defaults to `pretty`)
+</ParamField>
+
+<ParamField query="ignore" type="string">
+  Comma-separated list of glob patterns to ignore during analysis.
+  
+  **Example:**
+  ```bash
+  vibrant . --ignore "dist/**,build/**,*.test.ts"
+  ```
+  
+  **Default:** Empty (uses config file patterns)
+</ParamField>
+
+<ParamField query="fix" type="boolean" default={false}>
+  Automatically fix problems where possible. Only works with static analysis rules.
+  
+  **Example:**
+  ```bash
+  vibrant . --fix
+  ```
+</ParamField>
+
+<ParamField query="ai" type="boolean" default={false}>
+  Enable AI-powered analysis for deeper code quality insights.
+  
+  Requires a configured AI provider. See [AI providers](/ai-providers/overview) for setup.
+</ParamField>
+
+<ParamField query="provider" type="string">
+  Specify which AI provider to use for analysis.
+  
+  **Values:**
+  - `openai` - GPT-4o-mini (requires `OPENAI_API_KEY`)
+  - `claude` - Claude 3 Haiku (requires `ANTHROPIC_API_KEY`)
+  - `gemini` - Gemini 1.5 Flash (requires `GOOGLE_GENERATIVE_AI_API_KEY`)
+  - `ollama` - Local models (no API key required)
+  - `openrouter` - Multi-model API (requires `OPENROUTER_API_KEY`)
+  
+  **Example:**
+  ```bash
+  vibrant . --ai --provider openrouter
+  ```
+</ParamField>
+
+<ParamField query="no-cache" type="boolean" default={false}>
+  Disable the analysis cache for AI-powered analysis.
+  
+  By default, Vibrant caches analysis results to avoid re-analyzing unchanged files.
+</ParamField>
+
+## Examples
+
+### Basic analysis
+
+Analyze the current directory with default settings:
+
+```bash
+vibrant .
+```
+
+### Analyze specific file
+
+Analyze a single file:
+
+```bash
+vibrant src/components/Button.tsx
+```
+
+### AI-powered analysis
+
+Use AI for deeper insights:
+
+```bash
+vibrant . --ai
+```
+
+### Auto-fix issues
+
+Automatically fix problems:
+
+```bash
+vibrant . --fix
+```
+
+### Custom format and ignore patterns
+
+Generate a markdown report while ignoring test files:
+
+```bash
+vibrant . --format plan --ignore "**/*.test.ts,**/*.spec.ts"
+```
+
+### Use specific AI provider
+
+Analyze with Ollama (local, free):
+
+```bash
+vibrant . --ai --provider ollama
+```
+
+## Output
+
+### Static analysis output
+
+When running without `--ai`, Vibrant shows:
+
+- File location (name, line, column)
+- Rule ID that triggered
+- Error/warning message
+- Code snippet
+- Fix suggestions (if available)
+
+### AI analysis output
+
+When running with `--ai`, Vibrant provides:
+
+- **Vibrascope** - Visual quality score (0-100)
+- **Issues Found** - Detected problems with suggestions
+- **Diagnosis** - Overall code health summary
+- **Key Findings** - Top patterns detected
+- **Recommendations** - Actionable next steps
+
+## Exit codes
+
+- `0` - No errors found
+- `1` - Errors detected or analysis failed
+
+## See also
+
+- [Configuration file](/api/config/config-file)
+- [Rule configuration](/api/config/rule-config)
+- [Available rules](/api/commands/rules)

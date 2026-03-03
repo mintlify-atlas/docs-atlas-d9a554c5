@@ -1,0 +1,102 @@
+---
+title: init
+description: Create a vibrant.config.js configuration file
+---
+
+The `vibrant init` command creates a `vibrant.config.js` file in your current directory with sensible default settings.
+
+## Syntax
+
+```bash
+vibrant init
+```
+
+## Description
+
+This command initializes Vibrant in your project by creating a configuration file. It includes:
+
+- Default ignore patterns for common directories
+- Output format preference
+- AI provider configuration (commented out)
+
+If `vibrant.config.js` already exists, the command will skip creation and show a warning.
+
+## Generated configuration
+
+The default `vibrant.config.js` created by `init`:
+
+```javascript
+module.exports = {
+  // Directories to ignore during analysis
+  ignore: ['node_modules', '.git', 'dist', '.next', 'build', 'coverage'],
+  
+  // Output format: 'pretty', 'compact' or 'plan'
+  format: 'pretty',
+  
+  // AI Provider configuration (optional)
+  // provider: 'openrouter', // 'openai' | 'claude' | 'gemini' | 'ollama' | 'openrouter'
+};
+```
+
+## What gets configured
+
+<ResponseField name="ignore" type="string[]">
+  Array of glob patterns to exclude from analysis. Defaults include common directories like `node_modules`, `.git`, `dist`, `.next`, `build`, and `coverage`.
+</ResponseField>
+
+<ResponseField name="format" type="string">
+  Default output format. Set to `'pretty'` for colorful, detailed output.
+</ResponseField>
+
+<ResponseField name="provider" type="string" optional>
+  AI provider to use for enhanced analysis. Commented out by default. Uncomment and set to your preferred provider.
+</ResponseField>
+
+## Example usage
+
+### Initialize in a new project
+
+```bash
+cd my-project
+vibrant init
+```
+
+Output:
+```
+  ✓ Created vibrant.config.js
+
+  Configuration options:
+    • ignore   - Files and directories to exclude
+    • format   - Output style (pretty, compact, plan)
+    • provider - AI provider for enhanced analysis
+
+  Run vibrant . to analyze your code!
+```
+
+### Initialize with existing config
+
+If `vibrant.config.js` already exists:
+
+```bash
+vibrant init
+```
+
+Output:
+```
+  ⚠ vibrant.config.js already exists
+```
+
+## Next steps
+
+After running `vibrant init`:
+
+1. **Customize ignore patterns** - Add project-specific directories to exclude
+2. **Set output format** - Choose between `pretty`, `compact`, `plan`, or `json`
+3. **Configure AI provider** - Uncomment and set `provider` for AI-powered analysis
+4. **Configure rules** - Add custom rule configurations (see [rule config](/api/config/rule-config))
+
+## See also
+
+- [Configuration file reference](/api/config/config-file)
+- [Rule configuration](/api/config/rule-config)
+- [AI providers guide](/ai-providers/overview)

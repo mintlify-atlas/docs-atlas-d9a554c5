@@ -1,0 +1,285 @@
+---
+title: OpenAI setup
+description: Use OpenAI's GPT models with Vibrant CLI for high-quality code analysis
+---
+
+OpenAI provides industry-leading language models including GPT-4o and GPT-4o-mini, which offer excellent code understanding and analysis capabilities.
+
+## Why OpenAI?
+
+- **High quality** - Industry-leading models with excellent code understanding
+- **Reliable** - Stable API with consistent performance
+- **Fast** - GPT-4o-mini provides quick analysis with good quality
+- **Well-documented** - Extensive documentation and community support
+
+<Note>
+OpenAI is a paid service. You'll need to add credits to your account to use their API.
+</Note>
+
+## Get an API key
+
+<Steps>
+  <Step title="Create an account">
+    Visit [platform.openai.com](https://platform.openai.com) and sign up.
+  </Step>
+  
+  <Step title="Add billing">
+    Navigate to [Billing](https://platform.openai.com/account/billing) and add payment information.
+  </Step>
+  
+  <Step title="Create an API key">
+    Go to [API Keys](https://platform.openai.com/api-keys) and create a new key.
+  </Step>
+  
+  <Step title="Copy your key">
+    Your key will look like `sk-proj-...`. Keep it secure and never commit it to version control.
+  </Step>
+</Steps>
+
+## Setup
+
+### Option 1: Environment variable (recommended)
+
+Set the environment variable in your shell:
+
+```bash
+export OPENAI_API_KEY="sk-proj-..."
+```
+
+To make it permanent, add it to your shell profile:
+
+<CodeGroup>
+```bash ~/.bashrc or ~/.zshrc
+# Add this line to your shell profile
+export OPENAI_API_KEY="sk-proj-..."
+```
+
+```bash Windows PowerShell
+$env:OPENAI_API_KEY="sk-proj-..."
+```
+</CodeGroup>
+
+### Option 2: .env file
+
+Create a `.env` file in your project directory:
+
+```bash .env
+OPENAI_API_KEY=sk-proj-...
+```
+
+<Warning>
+Add `.env` to your `.gitignore` to prevent committing your API key.
+</Warning>
+
+### Option 3: Configuration file
+
+Create a `vibrant.config.js` file:
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'openai',
+  // API key will be read from environment variable
+};
+```
+
+## Usage
+
+Run Vibrant with OpenAI:
+
+```bash
+# Auto-detect provider (if OPENAI_API_KEY is set)
+vibrant . --ai
+
+# Explicitly specify OpenAI
+vibrant . --ai --provider openai
+```
+
+## Available models
+
+Vibrant uses **gpt-4o-mini** by default for the best balance of cost and quality.
+
+<AccordionGroup>
+  <Accordion title="gpt-4o-mini (default)">
+    - **Context**: 128k tokens
+    - **Cost**: ~$0.15 per 1M input tokens, ~$0.60 per 1M output tokens
+    - **Speed**: Very fast
+    - **Quality**: Excellent for code analysis
+    - **Best for**: Daily development, CI/CD pipelines
+  </Accordion>
+  
+  <Accordion title="gpt-4o">
+    - **Context**: 128k tokens
+    - **Cost**: ~$2.50 per 1M input tokens, ~$10 per 1M output tokens
+    - **Speed**: Fast
+    - **Quality**: Industry-leading
+    - **Best for**: Critical analysis, complex codebases
+  </Accordion>
+  
+  <Accordion title="gpt-4-turbo">
+    - **Context**: 128k tokens
+    - **Cost**: ~$10 per 1M input tokens, ~$30 per 1M output tokens
+    - **Speed**: Medium
+    - **Quality**: Excellent reasoning
+    - **Best for**: Complex architectural analysis
+  </Accordion>
+</AccordionGroup>
+
+### Change the model
+
+Set the `OPENAI_MODEL` environment variable:
+
+```bash
+export OPENAI_MODEL="gpt-4o"
+vibrant . --ai --provider openai
+```
+
+Or in your `.env` file:
+
+```bash .env
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-4o
+```
+
+## Pricing
+
+Typical costs for analyzing a medium-sized project (100 files):
+
+| Model | Input Cost | Output Cost | Typical Total |
+|-------|------------|-------------|---------------|
+| **gpt-4o-mini** | ~$0.002 | ~$0.005 | **~$0.01** per analysis |
+| **gpt-4o** | ~$0.04 | ~$0.08 | **~$0.15** per analysis |
+| **gpt-4-turbo** | ~$0.15 | ~$0.25 | **~$0.50** per analysis |
+
+<Note>
+Vibrant's Smart Summarizer reduces token usage by 50-60%, cutting your API costs in half.
+</Note>
+
+## Example output
+
+```bash
+vibrant . --ai --provider openai
+```
+
+```
+🔮 Vibrant Analysis
+─────────────────────
+
+📡 AI Analysis (openai:gpt-4o-mini)
+
+📊 Token Optimization:
+   Original: 45,000 tokens
+   Summarized: 18,000 tokens
+   Savings: 60.0%
+
+✔ Analysis complete
+
+📋 Summary:
+The codebase shows good structure but has several security concerns.
+API credentials are hardcoded in multiple files and error handling
+could be more robust.
+
+🔍 Key Findings:
+  • Critical: API keys in src/api.ts and src/config.ts
+  • 12 empty catch blocks across the codebase
+  • Inconsistent error handling patterns
+
+💡 Recommendations:
+  • Immediately move all credentials to environment variables
+  • Implement a centralized error handling strategy
+  • Add logging to catch blocks for debugging
+  • Consider using a secret management service
+
+✕ 3 errors · ⚠ 8 warnings · 100 files · 8s
+```
+
+## Troubleshooting
+
+### Error: API key not found
+
+```
+OpenAI API error: No API key provided
+```
+
+**Solution**: Set the `OPENAI_API_KEY` environment variable:
+
+```bash
+export OPENAI_API_KEY="sk-proj-..."
+```
+
+### Error: Insufficient credits
+
+```
+OpenAI API error: You exceeded your current quota
+```
+
+**Solution**: Add credits to your OpenAI account at [Billing](https://platform.openai.com/account/billing).
+
+### Error: Rate limit exceeded
+
+```
+OpenAI API error: Rate limit reached
+```
+
+**Solution**: Vibrant automatically retries with exponential backoff. If the issue persists, wait a few minutes or upgrade your OpenAI tier for higher rate limits.
+
+## Best practices
+
+<Steps>
+  <Step title="Start with gpt-4o-mini">
+    Use the default model for daily development. It provides excellent quality at low cost.
+  </Step>
+  
+  <Step title="Use gpt-4o for critical analysis">
+    When analyzing production code or complex issues, upgrade to gpt-4o for the best results.
+  </Step>
+  
+  <Step title="Monitor your usage">
+    Check your [usage dashboard](https://platform.openai.com/usage) regularly to track costs.
+  </Step>
+  
+  <Step title="Secure your API key">
+    Never commit API keys to version control. Use environment variables or secret management.
+  </Step>
+</Steps>
+
+## CI/CD integration
+
+For GitHub Actions:
+
+```yaml .github/workflows/code-quality.yml
+name: Code Quality
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run Vibrant
+        run: npx vibrant-cli . --ai --provider openai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+<Note>
+Add `OPENAI_API_KEY` as a secret in your repository settings.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI providers overview" icon="layer-group" href="/ai-providers/overview">
+    Compare all available providers
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/usage/configuration">
+    Customize Vibrant's behavior
+  </Card>
+</CardGroup>

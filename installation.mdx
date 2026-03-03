@@ -1,0 +1,202 @@
+---
+title: Installation
+description: Install Vibrant CLI and configure your environment
+---
+
+# Installation
+
+Vibrant can be used without installation via `npx`, or installed globally for faster access.
+
+## Prerequisites
+
+<Note>
+  Vibrant requires **Node.js 18.0.0 or higher**. Check your version with `node --version`.
+</Note>
+
+## Installation methods
+
+<Tabs>
+  <Tab title="npx (recommended)">
+    The easiest way to use Vibrant is via `npx` - no installation needed:
+
+    ```bash
+    npx vibrant-cli .
+    ```
+
+    This runs the latest version of Vibrant without any global installation.
+  </Tab>
+
+  <Tab title="npm">
+    Install Vibrant globally via npm:
+
+    ```bash
+    npm install -g vibrant-cli
+    ```
+
+    Then run it anywhere:
+
+    ```bash
+    vibrant .
+    ```
+  </Tab>
+
+  <Tab title="Bun">
+    Install Vibrant globally via Bun:
+
+    ```bash
+    bun install -g vibrant-cli
+    ```
+
+    Then run it anywhere:
+
+    ```bash
+    vibrant .
+    ```
+  </Tab>
+</Tabs>
+
+## Verify installation
+
+Check that Vibrant is installed correctly:
+
+```bash
+vibrant --version
+```
+
+You should see the version number printed to the console.
+
+## AI provider setup (optional)
+
+<Note>
+  AI-powered analysis is optional. Vibrant works great with just static analysis (no API keys needed).
+</Note>
+
+If you want to use AI-powered analysis, you'll need to configure an API key for one of the supported providers:
+
+| Provider | Environment Variable | Free Tier | Recommended Model |
+|----------|---------------------|-----------|-------------------|
+| **OpenRouter** | `OPENROUTER_API_KEY` | ✅ Free models | `google/gemini-2.0-flash-lite-001` |
+| **Gemini** | `GOOGLE_GENERATIVE_AI_API_KEY` | ✅ Free tier | `gemini-2.0-flash-lite` |
+| **OpenAI** | `OPENAI_API_KEY` | ❌ Paid | `gpt-4o-mini` |
+| **Claude** | `ANTHROPIC_API_KEY` | ❌ Paid | `claude-3-haiku-20240307` |
+| **Ollama** | `OLLAMA_HOST` | ✅ Local, free | `llama3.2` |
+
+### Configure API keys
+
+Choose one of these methods:
+
+<Steps>
+  <Step title="Create a .env file">
+    Create a `.env` file in your project directory:
+
+    ```bash
+    # .env
+    OPENROUTER_API_KEY="sk-or-v1-..."
+    ```
+
+    <Tip>
+      The `.env` file should be in the same directory where you run `vibrant .`
+    </Tip>
+  </Step>
+
+  <Step title="Or set environment variable">
+    Set the environment variable in your shell:
+
+    <CodeGroup>
+    ```bash macOS/Linux
+    export OPENROUTER_API_KEY="sk-or-v1-..."
+    ```
+
+    ```powershell Windows (PowerShell)
+    $env:OPENROUTER_API_KEY="sk-or-v1-..."
+    ```
+
+    ```cmd Windows (CMD)
+    set OPENROUTER_API_KEY=sk-or-v1-...
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+### Get API keys
+
+<CardGroup cols={2}>
+  <Card title="OpenRouter" icon="route" href="https://openrouter.ai/">
+    Free models available. Best for getting started.
+  </Card>
+  
+  <Card title="Google Gemini" icon="google" href="https://ai.google.dev/">
+    Generous free tier. No credit card required.
+  </Card>
+  
+  <Card title="OpenAI" icon="openai" href="https://platform.openai.com/">
+    Paid service. GPT-4o-mini is cost-effective.
+  </Card>
+  
+  <Card title="Anthropic Claude" icon="anthropic" href="https://console.anthropic.com/">
+    Paid service. Claude 3 Haiku is fast and affordable.
+  </Card>
+</CardGroup>
+
+### Ollama (local AI)
+
+For privacy-focused users, run AI analysis completely offline with Ollama:
+
+<Steps>
+  <Step title="Install Ollama">
+    Download and install Ollama from [ollama.ai](https://ollama.ai/)
+  </Step>
+
+  <Step title="Pull a model">
+    ```bash
+    ollama pull llama3.2
+    ```
+  </Step>
+
+  <Step title="Set the host (optional)">
+    If Ollama is running on a non-default port:
+
+    ```bash
+    export OLLAMA_HOST="http://localhost:11434"
+    ```
+  </Step>
+
+  <Step title="Run Vibrant with Ollama">
+    ```bash
+    vibrant . --ai --provider ollama
+    ```
+  </Step>
+</Steps>
+
+## Create a configuration file (optional)
+
+<Note>
+  Vibrant works with zero configuration. Only create a config file if you want to customize behavior.
+</Note>
+
+Generate a configuration file:
+
+```bash
+vibrant init
+```
+
+This creates a `vibrant.config.js` file:
+
+```javascript vibrant.config.js
+module.exports = {
+  // Directories to ignore during analysis
+  ignore: ['node_modules', '.git', 'dist', '.next', 'build', 'coverage'],
+  
+  // Output format: 'pretty', 'compact' or 'plan'
+  format: 'pretty',
+  
+  // AI Provider configuration (optional)
+  // provider: 'openrouter', // 'openai' | 'claude' | 'gemini' | 'ollama' | 'openrouter'
+};
+```
+
+## Next steps
+
+<Card title="Quick start" icon="rocket" href="/quickstart">
+  Learn how to use Vibrant to analyze your code
+</Card>

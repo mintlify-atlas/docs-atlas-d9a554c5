@@ -1,0 +1,267 @@
+---
+title: Static analysis
+description: Fast, offline code analysis using TypeScript's AST to detect bugs and security issues
+---
+
+Static analysis is Vibrant's core feature that analyzes your code **without executing it**. It parses your source code into an Abstract Syntax Tree (AST) and applies pattern-matching rules to detect bugs, security vulnerabilities, and code quality issues.
+
+## How it works
+
+Static analysis runs in three steps:
+
+1. **Parse** - Convert source files to TypeScript AST
+2. **Walk** - Traverse the AST tree visiting each node
+3. **Detect** - Apply rule visitors to find problematic patterns
+
+```typescript
+// From apps/cli/src/core/linter.ts
+const sourceFile = ts.createSourceFile(
+  filePath,
+  content,
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TS
+);
+
+const visit = (node: ts.Node) => {
+  context.pushAncestor(node);
+  
+  const nodeType = ts.SyntaxKind[node.kind];
+  const handler = listener[nodeType];
+  
+  if (handler) {
+    handler(node);
+  }
+  
+  ts.forEachChild(node, visit);
+  context.popAncestor();
+};
+```
+
+## Detection rules
+
+Vibrant includes 15+ built-in rules organized by category:
+
+### Security rules
+
+These rules detect critical security vulnerabilities that could expose your application to attacks:
+
+- **hardcoded-credentials** - Detects API keys, passwords, tokens in source code
+- **no-sql-injection** - Finds SQL injection vulnerabilities
+- **no-unsafe-inner-html** - Catches XSS risks via `innerHTML`
+
+<Accordion title="Example: hardcoded-credentials detection">
+
+This rule checks variable names and property assignments for credential-related keywords:
+
+```typescript
+// From apps/cli/src/rules/hardcoded-credentials.ts
+const CREDENTIAL_KEYWORDS = [
+  "password",
+  "apikey",
+  "api_key",
+  "secret",
+  "token",
+  "privatekey",
+  "private_key",
+];
+
+VariableDeclaration(node: ts.Node) {
+  if (!ts.isIdentifier(node.name)) return;
+  
+  const name = node.name.text.toLowerCase();
+  const hasCredentialName = CREDENTIAL_KEYWORDS.some(kw => 
+    name.includes(kw)
+  );
+  
+  if (!hasCredentialName) return;
+  if (!ts.isStringLiteral(node.initializer)) return;
+  
+  const value = node.initializer.text;
+  if (SAFE_VALUES.includes(value) || value.length <= 3) return;
+  
+  context.report({
+    node: node.initializer,
+    messageId: "hardcodedCredential",
+    data: { name: node.name.text }
+  });
+}
+```
+
+**Detected pattern:**
+```typescript
+const API_KEY = "sk-proj-abc123..."; // ❌ Flagged
+```
+
+**Suggested fix:**
+```typescript
+const API_KEY = process.env.API_KEY; // ✅ Safe
+```
+
+</Accordion>
+
+### Bug prevention rules
+
+These rules catch common programming errors that cause runtime failures:
+
+- **empty-catch-block** - Empty catch blocks swallow errors silently
+- **unimplemented-error** - Code throws "not implemented" errors
+- **empty-function-body** - Functions with no implementation
+- **no-unreachable** - Code after return/throw statements
+- **no-ex-assign** - Reassigning exception variables
+- **use-isnan** - Using `===` to compare with `NaN`
+
+<Accordion title="Example: empty-catch-block detection">
+
+```typescript
+// From apps/cli/src/rules/empty-catch-block.ts
+CatchClause(node: ts.Node) {
+  if (!ts.isCatchClause(node)) return;
+  
+  const block = node.block;
+  const statements = block.statements;
+  
+  const isEmpty = statements.length === 0;
+  const onlyConsoleLog = statements.length === 1 && 
+    isConsoleLog(statements[0]);
+  
+  if (!isEmpty && !onlyConsoleLog) return;
+  
+  context.report({
+    node: block,
+    messageId: isEmpty ? "emptyCatch" : "consoleOnlyCatch",
+    suggest: [
+      { messageId: "suggestHandle" },
+      { messageId: "suggestRethrow" }
+    ]
+  });
+}
+```
+
+**Detected pattern:**
+```typescript
+try {
+  await fetch('/api/data');
+} catch (e) {} // ❌ Errors silently swallowed
+```
+
+**Suggested fix:**
+```typescript
+try {
+  await fetch('/api/data');
+} catch (e) {
+  console.error('Failed to fetch data:', e);
+  throw e; // Re-throw or handle properly
+}
+```
+
+</Accordion>
+
+### Code quality rules
+
+These rules enforce best practices and improve maintainability:
+
+- **console-log-debugging** - Debug console statements in production code
+- **no-explicit-any** - Usage of TypeScript `any` type
+- **no-await-in-loop** - Sequential awaits instead of parallel execution
+
+### AI telltale rules
+
+These rules detect patterns commonly found in AI-generated code:
+
+- **ai-comment-emojis** - Emojis in code comments
+- **ai-todo-comments** - Excessive TODO/FIXME comments
+- **magic-numbers** - Unnamed numeric constants
+
+<Info>
+AI models often generate code with decorative emojis, many TODO comments, and magic numbers instead of named constants. These patterns suggest the code wasn't reviewed by a human.
+</Info>
+
+## Performance
+
+Static analysis is **extremely fast** because it doesn't execute code or make network requests:
+
+- **100 files**: ~200ms
+- **500 files**: ~800ms
+- **Zero API calls** - Runs completely offline
+
+```bash
+vibrant .
+# ✔ Analysis complete in 200ms
+```
+
+## Running static analysis
+
+Static analysis runs by default when you use the `vibrant` command:
+
+```bash
+# Analyze current directory
+vibrant .
+
+# Analyze specific path
+vibrant src/
+
+# Analyze with pattern
+vibrant "src/**/*.ts"
+```
+
+<Note>
+Static analysis is the default mode. No flags required.
+</Note>
+
+## Ignoring false positives
+
+You can suppress false positives using inline comments:
+
+```typescript
+// Vibrant ignore - ignores this line
+const apiKey = "test-key"; // vibrant ignore
+
+// Vibrant ignore-next-line - ignores next line
+const secret = "for-testing-only";
+```
+
+Or configure ignored patterns in `vibrant.config.js`:
+
+```javascript
+module.exports = {
+  ignore: ["*.test.ts", "dist/", "coverage/"],
+  rules: {
+    "hardcoded-credentials": "off" // Disable specific rule
+  }
+};
+```
+
+## Advantages of static analysis
+
+<Tip>
+**Fast and reliable** - No API keys, no network calls, consistent results every time.
+</Tip>
+
+- **Deterministic** - Same input always produces same output
+- **Offline** - Works without internet connection
+- **Zero cost** - No API fees
+- **Instant feedback** - Results in milliseconds
+- **CI/CD friendly** - Perfect for automated pipelines
+
+## Limitations
+
+Static analysis can only detect **syntactic patterns**. It cannot:
+
+- Understand business logic context
+- Detect complex architectural issues
+- Recognize domain-specific anti-patterns
+- Understand intent behind code decisions
+
+For deeper analysis, use [AI-powered analysis](/concepts/ai-analysis) with the `--ai` flag.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI analysis" icon="brain" href="/concepts/ai-analysis">
+    Learn about AI-powered deep code analysis
+  </Card>
+  <Card title="Auto-fix" icon="wrench" href="/concepts/auto-fix">
+    Automatically fix detected issues
+  </Card>
+</CardGroup>

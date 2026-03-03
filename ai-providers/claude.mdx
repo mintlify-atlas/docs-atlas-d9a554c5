@@ -1,0 +1,303 @@
+---
+title: Claude setup
+description: Use Anthropic's Claude models with Vibrant CLI for advanced code analysis
+---
+
+Claude by Anthropic offers powerful AI models known for their reasoning capabilities and detailed analysis, making them excellent for complex code review tasks.
+
+## Why Claude?
+
+- **Deep reasoning** - Excellent at understanding complex code patterns
+- **Detailed analysis** - Provides thorough explanations and context
+- **Large context** - Can analyze large codebases in a single request
+- **Safety-focused** - Built with responsible AI principles
+
+<Note>
+Claude is a paid service. You'll need to add credits to your Anthropic account to use their API.
+</Note>
+
+## Get an API key
+
+<Steps>
+  <Step title="Create an account">
+    Visit [console.anthropic.com](https://console.anthropic.com) and sign up.
+  </Step>
+  
+  <Step title="Add billing">
+    Navigate to [Plans & Billing](https://console.anthropic.com/settings/plans) and add payment information.
+  </Step>
+  
+  <Step title="Create an API key">
+    Go to [API Keys](https://console.anthropic.com/settings/keys) and generate a new key.
+  </Step>
+  
+  <Step title="Copy your key">
+    Your key will look like `sk-ant-api03-...`. Keep it secure.
+  </Step>
+</Steps>
+
+## Setup
+
+### Option 1: Environment variable (recommended)
+
+Set the environment variable in your shell:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-api03-..."
+```
+
+To make it permanent, add it to your shell profile:
+
+<CodeGroup>
+```bash ~/.bashrc or ~/.zshrc
+# Add this line to your shell profile
+export ANTHROPIC_API_KEY="sk-ant-api03-..."
+```
+
+```bash Windows PowerShell
+$env:ANTHROPIC_API_KEY="sk-ant-api03-..."
+```
+</CodeGroup>
+
+### Option 2: .env file
+
+Create a `.env` file in your project directory:
+
+```bash .env
+ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+<Warning>
+Add `.env` to your `.gitignore` to prevent committing your API key.
+</Warning>
+
+### Option 3: Configuration file
+
+Create a `vibrant.config.js` file:
+
+```javascript vibrant.config.js
+module.exports = {
+  provider: 'claude',
+  // API key will be read from environment variable
+};
+```
+
+## Usage
+
+Run Vibrant with Claude:
+
+```bash
+# Auto-detect provider (if ANTHROPIC_API_KEY is set)
+vibrant . --ai
+
+# Explicitly specify Claude
+vibrant . --ai --provider claude
+```
+
+## Available models
+
+Vibrant uses **claude-3-haiku-20240307** by default for fast, cost-effective analysis.
+
+<AccordionGroup>
+  <Accordion title="claude-3-haiku-20240307 (default)">
+    - **Context**: 200k tokens
+    - **Cost**: ~$0.25 per 1M input tokens, ~$1.25 per 1M output tokens
+    - **Speed**: Very fast
+    - **Quality**: Excellent for code analysis
+    - **Best for**: Daily development, quick analysis
+  </Accordion>
+  
+  <Accordion title="claude-3-5-sonnet-20241022">
+    - **Context**: 200k tokens
+    - **Cost**: ~$3.00 per 1M input tokens, ~$15.00 per 1M output tokens
+    - **Speed**: Fast
+    - **Quality**: Superior reasoning and analysis
+    - **Best for**: Complex codebases, architectural review
+  </Accordion>
+  
+  <Accordion title="claude-3-opus-20240229">
+    - **Context**: 200k tokens
+    - **Cost**: ~$15.00 per 1M input tokens, ~$75.00 per 1M output tokens
+    - **Speed**: Medium
+    - **Quality**: Best-in-class for complex tasks
+    - **Best for**: Critical production code, security audits
+  </Accordion>
+</AccordionGroup>
+
+### Change the model
+
+Set the `CLAUDE_MODEL` environment variable:
+
+```bash
+export CLAUDE_MODEL="claude-3-5-sonnet-20241022"
+vibrant . --ai --provider claude
+```
+
+Or in your `.env` file:
+
+```bash .env
+ANTHROPIC_API_KEY=sk-ant-api03-...
+CLAUDE_MODEL=claude-3-5-sonnet-20241022
+```
+
+## Pricing
+
+Typical costs for analyzing a medium-sized project (100 files):
+
+| Model | Input Cost | Output Cost | Typical Total |
+|-------|------------|-------------|---------------|
+| **claude-3-haiku** | ~$0.004 | ~$0.010 | **~$0.02** per analysis |
+| **claude-3-5-sonnet** | ~$0.05 | ~$0.12 | **~$0.20** per analysis |
+| **claude-3-opus** | ~$0.25 | ~$0.60 | **~$1.00** per analysis |
+
+<Note>
+Vibrant's Smart Summarizer reduces token usage by 50-60%, significantly lowering your costs.
+</Note>
+
+## Example output
+
+```bash
+vibrant . --ai --provider claude
+```
+
+```
+🔮 Vibrant Analysis
+─────────────────────
+
+📡 AI Analysis (claude:claude-3-haiku-20240307)
+
+📊 Token Optimization:
+   Original: 52,000 tokens
+   Summarized: 21,000 tokens
+   Savings: 59.6%
+
+✔ Analysis complete
+
+📋 Summary:
+This codebase demonstrates generally sound architectural patterns,
+but contains several critical security vulnerabilities that require
+immediate attention. The error handling strategy is inconsistent
+across modules, which could lead to silent failures in production.
+
+🔍 Key Findings:
+  • Hardcoded credentials in 3 files pose immediate security risk
+  • Empty catch blocks in error-prone async operations
+  • SQL query construction vulnerable to injection attacks
+  • Inconsistent input validation across API endpoints
+
+💡 Recommendations:
+  • Migrate all secrets to a secret management system (e.g., AWS Secrets Manager)
+  • Implement structured error logging with proper context
+  • Use parameterized queries or an ORM for database operations
+  • Add input validation middleware at the API layer
+  • Consider implementing request rate limiting
+
+✕ 4 errors · ⚠ 12 warnings · 100 files · 10s
+```
+
+## Troubleshooting
+
+### Error: API key not found
+
+```
+Claude API error: invalid x-api-key
+```
+
+**Solution**: Set the `ANTHROPIC_API_KEY` environment variable:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-api03-..."
+```
+
+### Error: Insufficient credits
+
+```
+Claude API error: Your credit balance is too low
+```
+
+**Solution**: Add credits to your Anthropic account at [Billing](https://console.anthropic.com/settings/plans).
+
+### Error: Rate limit exceeded
+
+```
+Claude API error: rate_limit_error
+```
+
+**Solution**: Vibrant automatically retries with exponential backoff. If the issue persists:
+
+- Wait a few minutes before retrying
+- Contact Anthropic support to increase your rate limits
+- Use a different provider temporarily: `vibrant . --ai --provider gemini`
+
+## Best practices
+
+<Steps>
+  <Step title="Use Haiku for daily development">
+    Claude Haiku provides excellent quality at a reasonable cost, perfect for frequent analyses.
+  </Step>
+  
+  <Step title="Use Sonnet for complex reviews">
+    When reviewing large refactors or architectural changes, Claude Sonnet offers superior reasoning.
+  </Step>
+  
+  <Step title="Reserve Opus for critical code">
+    Use Claude Opus for security audits, production deployments, or complex debugging tasks.
+  </Step>
+  
+  <Step title="Monitor your usage">
+    Check your [usage dashboard](https://console.anthropic.com/settings/usage) to track costs.
+  </Step>
+</Steps>
+
+## CI/CD integration
+
+For GitHub Actions:
+
+```yaml .github/workflows/code-quality.yml
+name: Code Quality
+
+on: [pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run Vibrant with Claude
+        run: npx vibrant-cli . --ai --provider claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: claude-3-5-sonnet-20241022  # Use Sonnet for PR reviews
+```
+
+<Note>
+Add `ANTHROPIC_API_KEY` as a secret in your repository settings.
+</Note>
+
+## When to use Claude
+
+Claude excels at:
+
+- **Complex reasoning** - Understanding intricate code patterns and dependencies
+- **Security analysis** - Identifying subtle security vulnerabilities
+- **Architectural review** - Evaluating system design and suggesting improvements
+- **Detailed explanations** - Providing thorough context for issues
+- **Large codebases** - 200k token context window handles big projects
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="AI providers overview" icon="layer-group" href="/ai-providers/overview">
+    Compare all available providers
+  </Card>
+  
+  <Card title="OpenAI setup" icon="openai" href="/ai-providers/openai">
+    Try GPT-4o for comparison
+  </Card>
+</CardGroup>

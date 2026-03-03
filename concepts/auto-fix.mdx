@@ -1,0 +1,439 @@
+---
+title: Auto-fix capability
+description: Automatically fix detected issues with safe, validated code transformations
+---
+
+Vibrant can automatically fix certain issues using **safe code transformations**. The auto-fix engine validates all changes before applying them to ensure your code remains syntactically valid.
+
+## How auto-fix works
+
+The fix process has three stages:
+
+1. **Detection** - Rules identify fixable issues
+2. **Validation** - Verify fixes won't break syntax
+3. **Application** - Apply fixes in reverse order to maintain positions
+
+```typescript
+// From apps/cli/src/core/fixer.ts
+export function applyFixes(content: string, fixes: Fix[]): string {
+  // Sort in reverse order to maintain positions
+  const sortedFixes = [...fixes].sort((a, b) => b.range[0] - a.range[0]);
+  let result = content;
+  
+  for (const fix of sortedFixes) {
+    result = 
+      result.substring(0, fix.range[0]) +
+      fix.text +
+      result.substring(fix.range[1]);
+  }
+  
+  return result;
+}
+```
+
+<Info>
+Fixes are applied in **reverse order** (from bottom to top) so that earlier fixes don't invalidate the positions of later ones.
+</Info>
+
+## Which issues can be auto-fixed?
+
+Not all issues can be safely auto-fixed. Here's what Vibrant can fix automatically:
+
+### Fixable issues
+
+| Rule | Auto-fix | Example |
+|------|----------|----------|
+| `console-log-debugging` | ✅ Yes | Removes debug console statements |
+| `empty-catch-block` | ❌ No | Requires human judgment on error handling |
+| `hardcoded-credentials` | ❌ No | Requires environment variable setup |
+| `no-explicit-any` | ❌ No | Requires proper type definition |
+| `no-await-in-loop` | ❌ No | Requires restructuring to Promise.all |
+
+<Warning>
+Only **safe, deterministic fixes** are auto-applied. Complex issues requiring human judgment are reported but not fixed automatically.
+</Warning>
+
+## Auto-fixing console.log statements
+
+The most common auto-fix removes debug console statements:
+
+```typescript
+// From apps/cli/src/rules/console-log-debugging.ts
+const meta = {
+  type: "problem",
+  fixable: "code", // ✅ This rule can auto-fix
+  messages: {
+    noConsoleDebug: "Debug console statement detected",
+    suggestRemove: "Remove this console statement"
+  }
+};
+
+function create(context: RuleContext): RuleListener {
+  return {
+    CallExpression(node: ts.Node) {
+      // ... detection logic ...
+      
+      context.report({
+        node,
+        messageId: "noConsoleDebug",
+        fix(fixer) {
+          const parent = node.parent;
+          if (ts.isExpressionStatement(parent)) {
+            return fixer.remove(parent); // Remove entire statement
+          }
+          return null;
+        }
+      });
+    }
+  };
+}
+```
+
+### Before auto-fix
+
+```typescript
+function fetchUser(id: string) {
+  console.log("Fetching user:", id); // ❌ Debug code
+  return fetch(`/api/users/${id}`);
+}
+```
+
+### After auto-fix
+
+```typescript
+function fetchUser(id: string) {
+  return fetch(`/api/users/${id}`);
+}
+```
+
+<Tip>
+Run `vibrant . --fix` to automatically remove all debug console statements from your codebase.
+</Tip>
+
+## Safe fix validation
+
+Before applying fixes, Vibrant validates that the changes won't break your code:
+
+```typescript
+// From apps/cli/src/core/fixer.ts
+export function validateFixes(content: string, fixes: Fix[]): FixValidationResult {
+  const diagnostics: string[] = [];
+  
+  // 1. Check for overlapping fixes
+  const sortedFixes = [...fixes].sort((a, b) => a.range[0] - b.range[0]);
+  for (let i = 0; i < sortedFixes.length - 1; i++) {
+    const current = sortedFixes[i];
+    const next = sortedFixes[i + 1];
+    
+    if (current.range[1] > next.range[0]) {
+      diagnostics.push(
+        `Overlapping fixes detected at positions ${current.range[0]}-${current.range[1]}`
+      );
+    }
+  }
+  
+  // 2. Apply fixes and check syntax
+  try {
+    const fixedContent = applyFixes(content, fixes);
+    
+    // Try to parse the result
+    const sourceFile = ts.createSourceFile(
+      "test.ts",
+      fixedContent,
+      ts.ScriptTarget.Latest,
+      true
+    );
+    
+    // Check for syntax errors
+    // ... validation logic ...
+  } catch (error) {
+    diagnostics.push(`Failed to apply fixes: ${error}`);
+  }
+  
+  return {
+    safe: diagnostics.length === 0,
+    fixes,
+    diagnostics
+  };
+}
+```
+
+<Accordion title="Validation checks performed">
+
+1. **Overlap detection** - Ensures fixes don't conflict with each other
+2. **Syntax parsing** - Verifies the fixed code is valid TypeScript
+3. **Error scanning** - Checks for incomplete transformations
+4. **Rollback on failure** - If validation fails, no changes are applied
+
+</Accordion>
+
+## Running auto-fix
+
+### Basic usage
+
+```bash
+# Fix all auto-fixable issues
+vibrant . --fix
+```
+
+### Example output
+
+```
+🔮 Vibrant Analysis
+─────────────────────
+
+✔ Analysis complete
+
+✕ src/api.ts:24:5
+  └─ console-log-debugging
+     Debug console statement
+     
+     → Auto-fix available
+
+✕ src/utils.ts:45:3
+  └─ console-log-debugging
+     Debug console statement
+     
+     → Auto-fix available
+
+✓ fixed 2 issues
+```
+
+### Selective fixing
+
+```bash
+# Fix specific file
+vibrant src/api.ts --fix
+
+# Fix specific pattern
+vibrant "src/**/*.ts" --fix
+
+# See what would be fixed (dry run)
+vibrant . --fix --format plan
+```
+
+## Fix application process
+
+When you run `--fix`, Vibrant:
+
+```typescript
+// From apps/cli/src/commands/lint.ts
+async function applyFixesToFiles(results: LintResult[]): Promise<void> {
+  for (const result of results) {
+    // Get all diagnostics with fixes
+    const fixes = result.diagnostics
+      .filter((d) => d.fix)
+      .map((d) => d.fix!);
+    
+    if (fixes.length === 0) continue;
+    
+    try {
+      const content = await readFile(result.file, "utf-8");
+      const fixed = applyFixes(content, fixes);
+      await writeFile(result.file, fixed, "utf-8");
+    } catch {}
+  }
+}
+
+if (options.fix) {
+  await applyFixesToFiles(results);
+  const fixCount = totalFixableErrors + totalFixableWarnings;
+  console.log(`✓ fixed ${fixCount} issues`);
+}
+```
+
+## Understanding fix suggestions
+
+Some rules provide fix **suggestions** instead of automatic fixes:
+
+```typescript
+// From apps/cli/src/rules/empty-catch-block.ts
+context.report({
+  node: block,
+  messageId: "emptyCatch",
+  suggest: [ // ⚠️ Suggestions, not auto-fixes
+    {
+      messageId: "suggestHandle",
+      fix() { return null; } // No automatic fix
+    },
+    {
+      messageId: "suggestRethrow",
+      fix() { return null; }
+    }
+  ]
+});
+```
+
+Suggestions appear in the output but require manual implementation:
+
+```
+✕ src/api.ts:89:1
+  └─ empty-catch-block
+     Empty catch block swallows errors
+     
+     89|} catch (e) {}
+     
+     → Add proper error handling  (suggestion)
+     → Rethrow the error          (suggestion)
+```
+
+<Note>
+Suggestions guide you on **what** to fix, but you must make the changes manually.
+</Note>
+
+## Best practices for auto-fix
+
+### 1. Review before committing
+
+Always review auto-fixed changes:
+
+```bash
+# Fix issues
+vibrant . --fix
+
+# Review changes
+git diff
+
+# Commit if satisfied
+git add .
+git commit -m "fix: remove debug console statements"
+```
+
+### 2. Run tests after fixing
+
+```bash
+vibrant . --fix && npm test
+```
+
+<Warning>
+While auto-fixes are validated for syntax correctness, they might change runtime behavior. Always run tests after applying fixes.
+</Warning>
+
+### 3. Use in CI/CD carefully
+
+```yaml
+# GitHub Actions example
+- name: Check for fixable issues
+  run: |
+    vibrant . --format json > report.json
+    # Fail if fixable issues exist
+    jq -e '.summary.fixableErrorCount == 0' report.json
+```
+
+<Tip>
+In CI/CD, **detect** fixable issues but don't auto-fix. Let developers fix them locally so they can review changes.
+</Tip>
+
+### 4. Combine with version control
+
+```bash
+# Create a backup branch
+git checkout -b auto-fix-backup
+
+# Apply fixes
+vibrant . --fix
+
+# Review diff
+git diff main
+
+# Merge if satisfied
+git checkout main
+git merge auto-fix-backup
+```
+
+## Fix-related output
+
+### Counting fixable issues
+
+```typescript
+// From apps/cli/src/core/linter.ts
+for (const d of ruleDiagnostics) {
+  if (d.severity === "error") {
+    errorCount++;
+    if (d.fix) fixableErrorCount++; // ✅ Can be auto-fixed
+  } else if (d.severity === "warn") {
+    warningCount++;
+    if (d.fix) fixableWarningCount++;
+  }
+}
+
+return {
+  file: filePath,
+  diagnostics,
+  errorCount,
+  warningCount,
+  fixableErrorCount,
+  fixableWarningCount
+};
+```
+
+### Output format
+
+```
+✕ 3 errors · ⚠ 2 warnings · 48 files · 200ms
+  (2 errors fixable with --fix)
+```
+
+## Advanced: Creating custom fixable rules
+
+You can create custom rules with auto-fix support:
+
+```typescript
+import type { Rule, RuleContext } from "vibrant-cli";
+
+const rule: Rule = {
+  meta: {
+    type: "problem",
+    fixable: "code", // ✅ Enable auto-fix
+    messages: {
+      useConst: "Use const instead of let for non-reassigned variables"
+    }
+  },
+  
+  create(context: RuleContext) {
+    return {
+      VariableDeclaration(node) {
+        if (node.declarationKind !== "let") return;
+        
+        // Check if variable is never reassigned
+        const isNeverReassigned = checkReassignment(node);
+        
+        if (isNeverReassigned) {
+          context.report({
+            node,
+            messageId: "useConst",
+            fix(fixer) {
+              // Replace "let" with "const"
+              return fixer.replaceText(node, 
+                node.getText().replace(/^let\b/, "const")
+              );
+            }
+          });
+        }
+      }
+    };
+  }
+};
+```
+
+## Limitations
+
+Auto-fix cannot handle:
+
+- **Semantic changes** - Fixes that require understanding business logic
+- **Multi-file refactoring** - Changes spanning multiple files
+- **Type system fixes** - Complex type inference and generics
+- **Architectural changes** - Restructuring code organization
+
+For these issues, Vibrant provides suggestions and you must fix manually.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Static analysis" icon="magnifying-glass" href="/concepts/static-analysis">
+    Learn about pattern-based detection
+  </Card>
+  <Card title="Configuration" icon="gear" href="/usage/configuration">
+    Configure which rules to enable
+  </Card>
+</CardGroup>

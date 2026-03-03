@@ -1,0 +1,356 @@
+---
+title: Ignoring issues
+description: Learn how to selectively ignore Vibrant issues using inline comments and configuration files
+---
+
+Vibrant provides multiple ways to ignore issues when they are intentional or false positives. You can ignore individual lines, blocks of code, or entire files using inline comments or configuration.
+
+## Inline ignore comments
+
+Use special comments in your code to ignore issues on specific lines.
+
+### Ignore current line
+
+Add `// vibrant ignore` to the end of a line or on the same line to ignore any issues on that line:
+
+```typescript
+const apiKey = "sk-test-1234"; // vibrant ignore
+const secret = process.env.SECRET; // vibrant ignore
+```
+
+You can also place the comment on its own line before the code:
+
+```typescript
+// vibrant ignore
+const apiKey = "sk-test-1234";
+```
+
+### Ignore next line
+
+Use `// vibrant ignore-next-line` to ignore issues on the following line:
+
+```typescript
+// vibrant ignore-next-line
+const password = "temp-password-123";
+
+function processData(data: any) { // vibrant ignore-next-line
+  // Implementation
+}
+```
+
+<Note>
+Ignore comments are case-insensitive. Both `// vibrant ignore` and `// Vibrant Ignore` work.
+</Note>
+
+## Configuration-based ignoring
+
+### Ignore files and directories
+
+Use the `ignore` property in `vibrant.config.js` to exclude entire files or directories:
+
+```javascript vibrant.config.js
+module.exports = {
+  ignore: [
+    'node_modules',
+    '.git',
+    'dist',
+    '*.test.ts',
+    'coverage/**',
+    'build/',
+  ],
+};
+```
+
+### Ignore patterns
+
+The `ignore` array supports glob patterns:
+
+<CodeGroup>
+
+```javascript Directories
+module.exports = {
+  ignore: [
+    'node_modules',     // Exact directory name
+    'dist/',            // Directory with trailing slash
+    '**/temp',          // Any temp directory at any depth
+  ],
+};
+```
+
+```javascript File extensions
+module.exports = {
+  ignore: [
+    '*.test.ts',        // All test files
+    '*.spec.js',        // All spec files
+    '**/*.d.ts',        // All type declaration files
+  ],
+};
+```
+
+```javascript Paths
+module.exports = {
+  ignore: [
+    'src/generated/**', // All files in generated directory
+    'vendor/',          // Third-party code
+    '.next/',           // Next.js build output
+  ],
+};
+```
+
+</CodeGroup>
+
+### Command-line ignore patterns
+
+Pass ignore patterns directly via the CLI:
+
+```bash
+vibrant . --ignore "*.test.ts,dist,coverage"
+```
+
+Multiple patterns are comma-separated:
+
+```bash
+vibrant . --ignore "node_modules,.git,dist/**,*.spec.js"
+```
+
+## When to ignore issues
+
+### Valid use cases
+
+<Steps>
+
+<Step title="Testing and examples">
+  Ignore issues in test files or example code where patterns are intentional:
+  
+  ```typescript
+  // Example demonstrating the problem
+  // vibrant ignore-next-line
+  if (value === NaN) { // Intentionally wrong
+    console.log("This is incorrect");
+  }
+  ```
+</Step>
+
+<Step title="Legacy code">
+  Temporarily ignore issues in legacy code while planning refactoring:
+  
+  ```typescript
+  // vibrant ignore - legacy code, tracked in TECH-1234
+  function processData(data: any) {
+    // Old implementation
+  }
+  ```
+</Step>
+
+<Step title="Generated code">
+  Ignore auto-generated files that shouldn't be modified:
+  
+  ```javascript vibrant.config.js
+  module.exports = {
+    ignore: [
+      'src/generated/**',
+      '**/*.generated.ts',
+      'prisma/client/',
+    ],
+  };
+  ```
+</Step>
+
+<Step title="Third-party code">
+  Exclude vendored dependencies or copied code:
+  
+  ```javascript vibrant.config.js
+  module.exports = {
+    ignore: [
+      'vendor/**',
+      'third_party/',
+      'lib/external/',
+    ],
+  };
+  ```
+</Step>
+
+</Steps>
+
+### Anti-patterns to avoid
+
+<Warning>
+Don't use ignore comments to hide real issues:
+
+```typescript
+// ❌ Bad: Hiding a security issue
+// vibrant ignore
+const apiKey = "sk-live-real-key"; // Should use environment variable
+
+// ❌ Bad: Suppressing type safety
+function getData(): any { // vibrant ignore
+  // Should use proper types
+}
+
+// ✅ Good: Fix the underlying issue
+const apiKey = process.env.API_KEY;
+
+function getData(): UserData {
+  // Properly typed
+}
+```
+</Warning>
+
+## Implementation details
+
+### How ignore comments work
+
+Vibrant's linter checks for ignore comments before reporting issues:
+
+```typescript apps/cli/src/core/linter.ts
+private shouldIgnoreLine(line: number): boolean {
+  const lines = this.source.split("\n");
+  
+  const currentLine = lines[line - 1];
+  const prevLine = lines[line - 2];
+  
+  // Check for inline ignore comment
+  if (currentLine && /\/\/\s*vibrant\s+ignore/i.test(currentLine)) {
+    return true;
+  }
+  
+  // Check for ignore-next-line comment
+  if (prevLine && /\/\/\s*vibrant\s+ignore-next-line/i.test(prevLine)) {
+    return true;
+  }
+  
+  return false;
+}
+```
+
+### Ignore pattern matching
+
+File ignoring uses glob patterns processed during file discovery:
+
+```typescript apps/cli/src/core/index.ts
+const ignorePatterns = options.ignore ?? config.ignores ?? config.ignore ?? [];
+const paths = await globFiles(options.path, ignorePatterns);
+```
+
+## Best practices
+
+<Steps>
+
+<Step title="Document why you're ignoring">
+  Always add a comment explaining why an issue is being ignored:
+  
+  ```typescript
+  // vibrant ignore - false positive, this pattern is safe in this context
+  const result = data as any;
+  
+  // vibrant ignore - TODO: refactor after v2 release (JIRA-123)
+  function legacyHandler(req: any) { }
+  ```
+</Step>
+
+<Step title="Use specific ignores over broad ones">
+  Prefer ignoring specific lines over entire files:
+  
+  ```typescript
+  // ✅ Good: Specific ignore
+  // vibrant ignore-next-line
+  const temp: any = JSON.parse(input);
+  
+  // ❌ Bad: Ignoring entire file
+  // Put in config: 'src/utils.ts'
+  ```
+</Step>
+
+<Step title="Review ignores regularly">
+  Periodically audit ignored issues to ensure they're still necessary:
+  
+  ```bash
+  # Search for ignore comments in your codebase
+  grep -r "vibrant ignore" src/
+  
+  # Review and remove unnecessary ignores
+  ```
+</Step>
+
+<Step title="Prefer fixes over ignores">
+  Only ignore issues when fixing isn't feasible:
+  
+  ```typescript
+  // ❌ Don't ignore fixable issues
+  const x = 10; // vibrant ignore - magic number
+  
+  // ✅ Fix the issue instead
+  const MAX_RETRIES = 10;
+  ```
+</Step>
+
+</Steps>
+
+## Examples
+
+### Ignoring security warnings in tests
+
+```typescript __tests__/auth.test.ts
+import { describe, it, expect } from 'vitest';
+
+describe('Authentication', () => {
+  it('should reject hardcoded credentials', () => {
+    // vibrant ignore - intentional test case
+    const badPassword = 'password123';
+    
+    expect(() => login('user', badPassword)).toThrow();
+  });
+});
+```
+
+### Ignoring type issues during migration
+
+```typescript src/legacy/api.ts
+/**
+ * Legacy API handler - being migrated to new type system
+ * Tracked in: TECH-456
+ */
+
+// vibrant ignore-next-line - temporary during migration
+export function handleRequest(req: any, res: any) {
+  // Old implementation
+  // Will be replaced with properly typed version
+}
+```
+
+### Configuration for monorepo
+
+```javascript vibrant.config.js
+module.exports = {
+  ignore: [
+    // Build outputs
+    '**/dist',
+    '**/build',
+    '**/.next',
+    
+    // Dependencies
+    'node_modules',
+    '**/vendor',
+    
+    // Generated code
+    '**/*.generated.ts',
+    'packages/*/src/generated/**',
+    
+    // Tests (analyze separately)
+    '**/*.test.ts',
+    '**/*.spec.ts',
+    '**/test/**',
+    '**/tests/**',
+    
+    // Config files
+    '*.config.js',
+    '*.config.ts',
+  ],
+};
+```
+
+## Related
+
+- [Configuration](/api/config/config-file) - Full configuration options
+- [CI/CD integration](/advanced/ci-cd-integration) - Using ignores in automated workflows
+- [Custom rules](/advanced/custom-rules) - Creating rules that respect ignores
