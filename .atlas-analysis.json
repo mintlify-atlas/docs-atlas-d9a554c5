@@ -1,0 +1,112 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Vibrant",
+  "projectDescription": "AI-powered CLI linter that detects vibecoded patterns, security vulnerabilities, and code quality issues",
+  "theme": "aspen",
+  "primaryColor": "#8b5cf6",
+  "lightColor": "#a78bfa",
+  "darkColor": "#7c3aed",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/static-analysis",
+              "concepts/ai-analysis",
+              "concepts/auto-fix"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/commands",
+              "usage/options",
+              "usage/configuration",
+              "usage/output-formats"
+            ]
+          },
+          {
+            "group": "AI Providers",
+            "pages": [
+              "ai-providers/overview",
+              "ai-providers/openrouter",
+              "ai-providers/openai",
+              "ai-providers/claude",
+              "ai-providers/gemini",
+              "ai-providers/ollama"
+            ]
+          },
+          {
+            "group": "Rules",
+            "pages": [
+              "rules/overview",
+              "rules/security",
+              "rules/bugs",
+              "rules/code-quality",
+              "rules/ai-telltales"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/ignoring-issues",
+              "advanced/ci-cd-integration",
+              "advanced/custom-rules"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "CLI Commands",
+            "pages": [
+              "api/commands/analyze",
+              "api/commands/init",
+              "api/commands/rules"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/config/config-file",
+              "api/config/rule-config"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Static analysis with 15+ detection rules",
+    "AI-powered deep pattern analysis",
+    "Auto-fix capability for common issues",
+    "Multiple AI provider support (OpenAI, Claude, Gemini, Ollama, OpenRouter)",
+    "Multiple output formats (pretty, compact, JSON, plan)",
+    "Zero configuration required",
+    "Detects security vulnerabilities, bugs, and AI-generated code patterns"
+  ],
+  "publicApiSurface": [
+    "vibrant [path]",
+    "vibrant init",
+    "vibrant rules",
+    "vibrant --ai",
+    "vibrant --fix",
+    "vibrant --format <type>",
+    "vibrant --provider <name>",
+    "vibrant --ignore <patterns>",
+    "vibrant.config.js"
+  ]
+}
